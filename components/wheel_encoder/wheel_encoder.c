@@ -15,31 +15,34 @@ static absolute_time_t last_time_right;
 static float speed;
 static float total_distance = 0.0f;
 
+void set_speed_distance(){
+    // Get average 
+    total_distance += ((pulses_left + pulses_right) / 2) * NOTCHES_CM;
+
+    float left_speed = (pulse_width_left > 0) ? NOTCHES_CM/pulse_width_left : 0;
+    float right_speed = (pulse_width_right > 0) ? NOTCHES_CM/pulse_width_right : 0;
+
+    speed = (left_speed + right_speed) /2;
+}
+
 void encoder_irq_callback(uint gpio, uint32_t events){
     absolute_time_t current_time = get_absolute_time();
-    if (gpio == LEFT_ENCODER_PIN){
+    if (gpio == LEFT_ENCODER_PIN || gpio == RIGHT_ENCODER_PIN){
+        if (gpio == LEFT_ENCODER_PIN){
         pulses_left++;
         int64_t time_diff = absolute_time_diff_us(last_time_left, current_time);
         pulse_width_left = (float) (time_diff/1000000.0f);
         last_time_left = current_time;
+        }
+        if (gpio == RIGHT_ENCODER_PIN){
+            pulses_right++;
+            int64_t time_diff = absolute_time_diff_us(last_time_right, current_time);
+            pulse_width_right = (float) (time_diff/1000000.0f);
+            last_time_right = current_time;
+        }
+        set_speed_distance();
     }
-    if (gpio == RIGHT_ENCODER_PIN){
-        pulses_right++;
-        int64_t time_diff = absolute_time_diff_us(last_time_right, current_time);
-        pulse_width_right = (float) (time_diff/1000000.0f);
-        last_time_right = current_time;
-    }
-}
 
-void set_speed_distance(){
-    speed = ((pulses_left + pulses_right) / 2) * NOTCHES_CM;
-    total_distance += ((pulses_left + pulses_right) / 2) * NOTCHES_CM;
-
-    float left_speed = 0;
-    float right_speed = 0;
-
-    left_speed = (pulse_width_left > 0) ? NOTCHES_CM/pulse_width_left : 0;
-    right_speed = (pulse_width_right > 0) ? NOTCHES_CM/pulse_width_right : 0;
 }
 
 void wheel_encoder_init(){

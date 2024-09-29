@@ -26,7 +26,6 @@ pico_stdlib
 hardware_pwm 
 hardware_adc 
 hardware_gpio 
-hardware_timer
 )
 
 pico_enable_stdio_usb(robotic_car 1)
