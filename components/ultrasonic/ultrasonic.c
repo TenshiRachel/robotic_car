@@ -21,10 +21,6 @@ void sendPulse(){
     gpio_put(TRIG_PIN, 0);
 }
 
-float calculate_obstacle_distance(uint64_t pulse){
-    return pulse * SOUND_SPEED / 2;
-}
-
 void echo_callback(uint gpio, uint32_t events){
     if ((events & GPIO_IRQ_EDGE_RISE) && gpio == ECHO_PIN){
         start = get_absolute_time();
@@ -36,8 +32,9 @@ void echo_callback(uint gpio, uint32_t events){
             start = end;
         }
         else{
-            obstacle_distance = calculate_obstacle_distance(absolute_time_diff_us(start, end));
-            printf("Distance to obstacle: %.2f\n", obstacle_distance);
+            uint64_t pulse = absolute_time_diff_us(start, end);
+            obstacle_distance = pulse * SOUND_SPEED /2;
+            // printf("Distance to obstacle: %.2f\n", obstacle_distance);
         }
     }
 }
@@ -61,6 +58,3 @@ void ultrasonic_init(){
     gpio_set_irq_enabled_with_callback(ECHO_PIN, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, &echo_callback);
 }
 
-float get_obstacle_distance(){
-    return obstacle_distance;
-}
