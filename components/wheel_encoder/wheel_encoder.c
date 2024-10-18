@@ -9,10 +9,8 @@
 
 static uint32_t pulses_left = 0;
 static uint32_t pulses_right = 0;
-static float pulse_width_left;
-static float pulse_width_right;
-static absolute_time_t last_time_left;
-static absolute_time_t last_time_right;
+static float pulse_width_left, pulse_width_right;
+static absolute_time_t last_time_left, last_time_right;
 static volatile float speed;
 static volatile float total_distance = 0.0f;
 

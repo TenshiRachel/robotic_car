@@ -10,15 +10,32 @@
 #define SOUND_SPEED 0.0343f
 #define TIMEOUT_US 26100
 
-absolute_time_t start;
-absolute_time_t end;
+absolute_time_t start, end;
 
 static float obstacle_distance = 0.0f;
+
+// Kalman filter variables
+static float estimate = 0.0f;
+static float uncertainty = 1.0f;
+const float Q = 0.01f;
+const float R = 0.5f;
 
 void sendPulse(){
     gpio_put(TRIG_PIN, 1);
     busy_wait_us(10);
     gpio_put(TRIG_PIN, 0);
+}
+
+float kalman_update(float distance){
+    uncertainty += Q;
+
+    float K = uncertainty / (uncertainty + R);
+
+    estimate = estimate + K * (distance - estimate);
+
+    uncertainty = (1 - K) * uncertainty;
+    
+    return estimate;
 }
 
 void echo_callback(uint gpio, uint32_t events){
@@ -33,7 +50,8 @@ void echo_callback(uint gpio, uint32_t events){
         }
         else{
             uint64_t pulse = absolute_time_diff_us(start, end);
-            obstacle_distance = pulse * SOUND_SPEED /2;
+            float raw_distance = pulse * SOUND_SPEED / 2;
+            obstacle_distance = kalman_update(raw_distance);
             // printf("Distance to obstacle: %.2f\n", obstacle_distance);
         }
     }
