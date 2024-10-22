@@ -19,6 +19,8 @@ add_executable(robotic_car
 main.c
 components/ultrasonic/ultrasonic.c
 components/wheel_encoder/wheel_encoder.c
+components/ir_sensor/project_ir_contrast/project_ir_contrast.c
+components/ir_sensor/project_ir_pulsewidth/project_ir_pulsewidth.c
 )
 
 target_link_libraries(robotic_car 
@@ -34,3 +36,5 @@ pico_enable_stdio_uart(robotic_car 1)
 pico_add_extra_outputs(robotic_car) 
 
 example_auto_set_url(robotic_car)
+
+add_subdirectory(components)
