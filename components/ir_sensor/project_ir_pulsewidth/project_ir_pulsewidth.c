@@ -31,9 +31,9 @@ int main(void) {
             uint64_t pulseDuration = absolute_time_diff_us(startTime, endTime);
 
             if (currentState == WHITE) {
-                printf("BLACK Pulse Duration: %llu microseconds\n", pulseDuration);
+                printf("BLACK Pulse Duration: %llu ms\n", pulseDuration/1000);
             } else {
-                printf("WHITE Pulse Duration: %llu microseconds\n", pulseDuration);
+                printf("WHITE Pulse Duration: %llu ms\n", pulseDuration/1000);
             }
 
             // Update the state and reset start time for the next pulse
@@ -41,7 +41,7 @@ int main(void) {
             startTime = get_absolute_time(); // Reset the start time
         }
 
-        sleep_us(1);
+        sleep_ms(1);
     }
 }
 
