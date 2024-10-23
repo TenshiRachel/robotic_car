@@ -5,8 +5,6 @@
  */
 
 // using UDP for the network connection
-// chatgpt was used to modify this from the original TCP code
-
 #include "pico/cyw43_arch.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
@@ -20,6 +18,7 @@
 #include "lwip/ip4_addr.h"
 #include "lwip/netif.h"
 #include <lwip/sockets.h>
+#include <semphr.h>
 
 #ifndef PING_ADDR
 #define PING_ADDR "192.168.137.1"
@@ -30,9 +29,12 @@
 
 #define LWIP_SOCKET 1
 #define TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 1UL)
-#define BUF_SIZE 96
+#define BUF_SIZE 128
 
 int conn_sock;
+
+const char dashboard_ip[] = "192.168.1.3";
+const char controller_ip[] = "192.168.1.2";
 
 static void run_server()
 {
@@ -48,7 +50,7 @@ static void run_server()
     struct sockaddr_in listen_addr = {
         .sin_family = AF_INET,
         .sin_port = htons(1234),      // Port to listen on (1234)
-        .sin_addr.s_addr = INADDR_ANY // Listen on any available IP address, on the pico the default is 192.168.4.1
+        .sin_addr.s_addr = INADDR_ANY // Listen on any available IP address
     };
 
     if (bind(conn_sock, (struct sockaddr *)&listen_addr, sizeof(listen_addr)) < 0)
@@ -101,24 +103,15 @@ static void run_server()
         // }
         // else
         // {
-
-        // Generate a random message to be sent back to client
+        // Generate and send a random message
         char randNum = 26 * (rand() / (RAND_MAX + 1.0)) + 97;
-        char a[] = "Hello ";
-        char b[11] = {0};
+        char a[] = "Hello";
+        char b[10] = {0};
         char c[4] = {randNum, '\r', '\n', '\0'};
 
         strcat(b, a);
         strcat(b, c);
-        
-        // Measure end time for execution timing
-        absolute_time_t end_time = get_absolute_time();
-        uint32_t execution_time_before = absolute_time_diff_us(start_time, end_time);
 
-        // Output execution time
-        printf("Execution Time: %d microseconds\n", execution_time_before);
-
-        // send the random message back
         int sent_bytes = sendto(conn_sock, b, strlen(b), 0,
                                 (struct sockaddr *)&remote_addr, addr_len);
         if (sent_bytes < 0)
@@ -126,6 +119,13 @@ static void run_server()
             printf("Error sending response: %d\n", errno);
         }
         // }
+
+        // Measure end time for execution timing
+        absolute_time_t end_time = get_absolute_time();
+        uint32_t execution_time_before = absolute_time_diff_us(start_time, end_time);
+
+        // Output execution time before optimization
+        printf("Execution Time: %d microseconds\n", execution_time_before);
     }
 
     // Step 8: Close the socket when done (though this is never reached here)
@@ -156,11 +156,11 @@ void main_task(__unused void *params)
 #else
     const char *password = NULL;
 #endif
-    cyw43_arch_enable_ap_mode(ap_name, password, CYW43_AUTH_WPA2_AES_PSK); // use the pico as a wifi access point
+    cyw43_arch_enable_ap_mode(ap_name, password, CYW43_AUTH_WPA2_AES_PSK);
 
     run_server();
 
-    cyw43_arch_deinit(); // should never reach here unless error!!
+    cyw43_arch_deinit();
 }
 
 void vLaunch(void)
@@ -200,8 +200,9 @@ int main(void)
     while (true)
         ;
 #else
-    sleep_ms(3500);
+    sleep_ms(4000);
     printf("Starting %s on core 0:\n", rtos_name);
+    s_ConnectionSemaphore = xSemaphoreCreateCounting(kConnectionThreadCount, kConnectionThreadCount);
     vLaunch();
 #endif
     return 0;
