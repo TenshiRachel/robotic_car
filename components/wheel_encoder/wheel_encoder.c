@@ -5,7 +5,8 @@
 // IMPORTANT!!! CHANGE BASED ON WHERE ITS PLUGGED FOR ACTUAL
 #define LEFT_ENCODER_PIN 2
 #define RIGHT_ENCODER_PIN 8
-#define NOTCHES_CM 1.05f // Circumference 21cm, 20 notches, therefore 1 notch approx 21/20cm
+#define TIMEOUT_MS 1000 // Timeout after 1 second to reset pulse widths
+#define NOTCHES_CM 1.025f // Circumference 21cm, 20 notches, therefore 1 notch approx 20.5/20cm
 
 static uint32_t pulses_left = 0;
 static uint32_t pulses_right = 0;
@@ -32,13 +33,29 @@ void encoder_irq_callback(uint gpio, uint32_t events){
         if (gpio == LEFT_ENCODER_PIN){
             pulses_left++;
             int64_t time_diff = absolute_time_diff_us(last_time_left, current_time);
-            pulse_width_left = (float) (time_diff/1000000.0f); // Convert to seconds
+
+            if (time_diff > TIMEOUT_MS * 1000){
+                pulse_width_left = 0.0f;
+            }
+            else{
+                pulse_width_left = (float) (time_diff/1000000.0f); // Convert to seconds
+                // printf("Pulse width left: %f\n", pulse_width_left);
+            }
+
             last_time_left = current_time;
         }
         if (gpio == RIGHT_ENCODER_PIN){
             pulses_right++;
             int64_t time_diff = absolute_time_diff_us(last_time_right, current_time);
-            pulse_width_right = (float) (time_diff/1000000.0f);
+
+            if (time_diff > TIMEOUT_MS * 1000){
+                pulse_width_right = 0.0f;
+            }
+            else{
+                pulse_width_right = (float) (time_diff/1000000.0f);
+                // printf("Pulse width right: %f\n", pulse_width_right);
+            }
+
             last_time_right = current_time;
         }
         set_speed_distance();
