@@ -1,1 +1,2 @@
 add_subdirectory(ir_sensor)
+add_subdirectory(motor_control)
