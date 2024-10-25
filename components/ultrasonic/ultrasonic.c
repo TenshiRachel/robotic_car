@@ -3,12 +3,15 @@
 #include "hardware/timer.h"
 #include <stdio.h>
 
+#include "components/motor_control/motor_control.h"
+
 // IMPORTANT!!! CHANGE BASED ON WHERE ITS PLUGGED FOR ACTUAL
 #define TRIG_PIN 1
 #define ECHO_PIN 0
 #define MAX_RANGE 400.0f
 #define SOUND_SPEED 0.0343f
 #define TIMEOUT_US 26100
+#define SAFETY_THRESHOLD 10
 
 absolute_time_t start, end;
 
@@ -53,6 +56,9 @@ void echo_callback(uint gpio, uint32_t events){
             float raw_distance = pulse * SOUND_SPEED / 2;
             obstacle_distance = kalman_update(raw_distance);
             // printf("Distance to obstacle: %.2f\n", obstacle_distance);
+            if (obstacle_distance >= SAFETY_THRESHOLD){
+                stop_motors();
+            }
         }
     }
 }
