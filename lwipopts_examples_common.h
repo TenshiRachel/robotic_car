@@ -1,9 +1,8 @@
 #ifndef _LWIPOPTS_EXAMPLE_COMMONH_H
 #define _LWIPOPTS_EXAMPLE_COMMONH_H
 
-
 // Common settings used in most of the pico_w examples
-// (see https://www.nongnu.org/lwip/2_1_x/group__lwip__opts.html for details)
+// (see https://www.nongnu.org/lwip/2_1_x/group__lwip__opts.html for details
 
 // allow override in some examples
 #ifndef NO_SYS
@@ -88,3 +87,21 @@
 #define DHCP_DEBUG                  LWIP_DBG_OFF
 
 #endif /* __LWIPOPTS_H__ */
+
+#define REMOTE 1 // set PICO_ROLE in cmake target compile definiton to this value if the pico is the remote
+#define DASHBOARD 2 // set PICO_ROLE in cmake target compile definiton to this value if the pico is the dashboard
+
+#if defined(STATIC_IP) // if STATIC_IP is defined in the cmake target compile definitons, configure a static IP
+#undef LWIP_DHCP
+#define LWIP_DHCP 0 // disable the dhcp client as we are using static ip
+#define CYW43_DEFAULT_IP_STA_GATEWAY LWIP_MAKEU32(192, 168, 137, 1)  // set static gateway
+
+#if PICO_ROLE == REMOTE // if PICO_ROLE = 1 in the cmake 
+#define CYW43_DEFAULT_IP_STA_ADDRESS LWIP_MAKEU32(192, 168, 137, 65) // change this to something in your hotspot's subnet to test
+#elif PICO_ROLE == DASHBOARD // if PICO_ROLE = 1 in the cmake
+#define CYW43_DEFAULT_IP_STA_ADDRESS LWIP_MAKEU32(192, 168, 137, 192) // change this to something in your hotspot's subnet to test
+#endif
+
+#endif
+
+

@@ -20,6 +20,7 @@
 #include "lwip/ip4_addr.h"
 #include "lwip/netif.h"
 #include <lwip/sockets.h>
+#include "lwipopts.h"
 
 #ifndef PING_ADDR
 #define PING_ADDR "192.168.137.1"
@@ -32,12 +33,66 @@
 #define TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 1UL)
 #define BUF_SIZE 96
 
+#define MESSAGE "Message from Pico!"
+
 int conn_sock;
+int num_stas;
+uint8_t macs;
+cyw43_t self;
+
+void sendTask(__unused void *params)
+{
+}
+
+void run_broadcast()
+{
+        //Create a UDP socket
+        int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if (sock < 0)
+        {
+            printf("Failed to create socket: error %d\n", errno);
+            return;
+        }
+
+        // Enable broadcast option on the socket
+        int broadcast_enable = 1;
+        if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) < 0)
+        {
+            printf("Failed to enable broadcast: error %d\n", errno);
+            //close(conn_sock);
+            return;
+        }
+        
+        // Set up the destination broadcast address
+        struct sockaddr_in broadcast_addr;
+        memset(&broadcast_addr, 0, sizeof(broadcast_addr));
+        broadcast_addr.sin_family = AF_INET;
+        broadcast_addr.sin_port = htons(8000);
+        broadcast_addr.sin_addr.s_addr = inet_addr("255.255.255.255");
+
+        while(1) {
+            // Send the message to the broadcast address
+            int result = sendto(sock, MESSAGE, strlen(MESSAGE), 0, (struct sockaddr *)&broadcast_addr, sizeof(broadcast_addr));
+            if (result < 0)
+            {
+                printf("Failed to send broadcast: error %d\n", errno);
+            }
+            else
+            {
+                printf("Broadcast message sent successfully\n");
+            }
+            sleep_ms(1000);
+        }
+        
+
+        // Close the socket
+        //close(conn_sock);
+}
 
 static void run_server()
 {
     // Step 1: Create a UDP socket
-    int conn_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    conn_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (conn_sock < 0)
     {
         printf("Unable to create socket: error %d\n", errno);
@@ -54,7 +109,7 @@ static void run_server()
     if (bind(conn_sock, (struct sockaddr *)&listen_addr, sizeof(listen_addr)) < 0)
     {
         printf("Unable to bind socket: error %d\n", errno);
-        close(conn_sock);
+        //close(conn_sock);
         return;
     }
 
@@ -88,7 +143,7 @@ static void run_server()
         printf("Message: %s\n", buffer);
 
         // Initialize the start time for measuring execution time
-        absolute_time_t start_time = get_absolute_time();
+        //absolute_time_t start_time = get_absolute_time();
 
         // Process the command
         // if (!strcmp(buffer, "on"))
@@ -110,13 +165,14 @@ static void run_server()
 
         strcat(b, a);
         strcat(b, c);
-        
+
+        printf("Message sent: %s", b);
         // Measure end time for execution timing
-        absolute_time_t end_time = get_absolute_time();
-        uint32_t execution_time_before = absolute_time_diff_us(start_time, end_time);
+        //absolute_time_t end_time = get_absolute_time();
+        //uint32_t execution_time_before = absolute_time_diff_us(start_time, end_time);
 
         // Output execution time
-        printf("Execution Time: %d microseconds\n", execution_time_before);
+        //printf("Execution Time: %d microseconds\n", execution_time_before);
 
         // send the random message back
         int sent_bytes = sendto(conn_sock, b, strlen(b), 0,
@@ -129,7 +185,11 @@ static void run_server()
     }
 
     // Step 8: Close the socket when done (though this is never reached here)
-    close(conn_sock);
+    //close(conn_sock);
+}
+
+void broadcastTask(__unused void *params) {
+    run_broadcast();
 }
 
 void main_task(__unused void *params)
@@ -139,6 +199,7 @@ void main_task(__unused void *params)
         printf("failed to initialise\n");
         return;
     }
+
     // cyw43_arch_enable_sta_mode();
     // printf("Connecting to Wi-Fi...\n");
     // if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 30000))
@@ -157,9 +218,13 @@ void main_task(__unused void *params)
     const char *password = NULL;
 #endif
     cyw43_arch_enable_ap_mode(ap_name, password, CYW43_AUTH_WPA2_AES_PSK); // use the pico as a wifi access point
+    
+    // TaskHandle_t broadcast_task;
+    // xTaskCreate(broadcastTask, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, &broadcast_task);
 
     run_server();
 
+    
     cyw43_arch_deinit(); // should never reach here unless error!!
 }
 
