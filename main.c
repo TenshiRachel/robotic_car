@@ -5,7 +5,7 @@
 #include "components/ultrasonic/ultrasonic.h"
 #include "components/wheel_encoder/wheel_encoder.h"
 #include "components/motor_control/motor_control.h"
-// #include "components/ir_sensor/ir_sensor.h"
+#include "components/ir_sensor/ir_sensor.h"
 #include "components/ir_sensor/ir_line_following.h"
 
 // Lib
@@ -30,13 +30,14 @@ void ultrasonicTask(__unused void *params){
     
 }
 
-// void irTask(__unused void *params){
-//     struct repeating_timer timer;
-//     add_repeating_timer_ms(10, read_line, NULL, &timer);
-//     while (1) {        
-//         vTaskDelay(pdMS_TO_TICKS(10));  
-//     }
-// }
+void irBarcodeTask(__unused void *params){
+    struct repeating_timer timer;
+    add_repeating_timer_ms(10, process_barcode, NULL, &timer);
+    while (1)
+    {        
+        vTaskDelay(portMAX_DELAY);
+    }
+}
 
 void irTask(__unused void *params) {
     while (1) {
@@ -45,25 +46,27 @@ void irTask(__unused void *params) {
         if (!blocked) {
             // Control motors based on line state if needed
             if (line_state == WHITE) {
-                // printf("too white. turn left/\n");
                 turn_left(0.4f,0.6f);
             } else if (line_state == BLACK) {
-                // printf("too black. turn left/right\n");
                 turn_right(0.4f,0.6f);
             } else {
                 move_forward(0.8f,0.8f);
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(10));  // Delay 100 ms between readings
+        vTaskDelay(pdMS_TO_TICKS(10));  // Delay 10 ms between readings
     }
 }
 
 void vLaunch( void){
     TaskHandle_t ultratask;
     xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 5, &ultratask);
+
     TaskHandle_t infraTask;
     xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
+
+    TaskHandle_t infraBarCodeTask;
+    xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
 
 #if NO_SYS && configUSE_CORE_AFFINITY && configNUM_CORES > 1
     // we must bind the main task to one core (well at least while the init is called)

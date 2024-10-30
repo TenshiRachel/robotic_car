@@ -4,12 +4,11 @@
 #include "hardware/adc.h"
 #include <stdbool.h>
 
-#define THRESHOLD 0.6
 #define WHITE 0
 #define BLACK 1
 #define BARCODE_SIZE 9
-#define GPIO_PIN 26
-#define ADC_CHANNEL 0
+#define GPIO_PIN 27
+#define ADC_CHANNEL 1
 
 typedef struct
 {
@@ -103,7 +102,7 @@ bool process_barcode(struct repeating_timer *t)
         // Skip if too long or too short
         if (timing_ms > 3000 || timing_ms < 5)
         {
-            return false;
+            return true;
         }
         
         // Update timing in circular array
@@ -120,14 +119,6 @@ bool process_barcode(struct repeating_timer *t)
             // Classify the timings into a binary string of 9 values
             classify_timings(&timings_index, timings, classified_string);
 
-            // // Print the classified timings
-            // printf("Classified Timings: ");
-            // for (int i = 0; i < BARCODE_SIZE; i++) {
-            //     // Calculate the actual index in the circular array
-            //     printf("%d ", classified_string[i]);
-            // }
-            // printf("\n"); // Print a newline at the end for better readability
-
             characterValue value;
 
             // If already read but hasn't ended, check for character
@@ -140,7 +131,7 @@ bool process_barcode(struct repeating_timer *t)
                 {
                     read_flag = true; // set flag to read the character
                     gap_flag = true; // set flag to skip the gap pulse
-                    // printf("Found start * successfully!\n");
+                    printf("Found start * successfully!\n");
 
                     // reset array to no timings
                     num_existing_timings = 0;
@@ -155,8 +146,8 @@ bool process_barcode(struct repeating_timer *t)
                 if (gap_flag)
                 {
                     gap_flag = false;
-                    // printf("Skip gap pulse!\n");
-                    return false;
+                    printf("Skip gap pulse!\n");
+                    return true;
                 }
                 
                 // If end flag not set, read character
@@ -171,7 +162,7 @@ bool process_barcode(struct repeating_timer *t)
                         end_flag = true; // signal to go detect for end character
                         gap_flag = true; // set flag to skip the gap pulse
                         character_read = value.character;
-                        // printf("Read a character! Now listening for end *.\n");
+                        printf("Read a character! Now listening for end *.\n");
                     }
                     else // RESET EVERYTHING
                     {
@@ -187,7 +178,7 @@ bool process_barcode(struct repeating_timer *t)
                     value = check_asterisk(classified_string, end_flag, &reverse_flag);
                     if (value.success)
                     {
-                        // printf("Successfully read character %c! Resetting to listen for start *.\n", character_read);
+                        printf("Successfully read character %c! Resetting to listen for start *.\n", character_read);
                     }
                     // Whether success/fail, reset flags and continue listening for start asterisk
                     read_flag = end_flag = gap_flag = reverse_flag = false;
