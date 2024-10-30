@@ -42,22 +42,28 @@ void irTask(__unused void *params) {
     while (1) {
         int line_state = read_line();  // Read sensor data every 10 ms
 
-        // Control motors based on line state if needed
-        if (line_state == WHITE) {
-            printf("too white. turn left/\n");
-        } else if (line_state == BLACK) {
-            printf("too black. turn left/right\n");
+        if (!blocked) {
+            // Control motors based on line state if needed
+            if (line_state == WHITE) {
+                // printf("too white. turn left/\n");
+                turn_left(0.4f,0.6f);
+            } else if (line_state == BLACK) {
+                // printf("too black. turn left/right\n");
+                turn_right(0.4f,0.6f);
+            } else {
+                move_forward(0.8f,0.8f);
+            }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(10));  // Delay 10 ms between readings
+        vTaskDelay(pdMS_TO_TICKS(10));  // Delay 100 ms between readings
     }
 }
 
 void vLaunch( void){
     TaskHandle_t ultratask;
-    xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 2, &ultratask);
-    // TaskHandle_t infraTask;
-    // xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
+    xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 5, &ultratask);
+    TaskHandle_t infraTask;
+    xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
 
 #if NO_SYS && configUSE_CORE_AFFINITY && configNUM_CORES > 1
     // we must bind the main task to one core (well at least while the init is called)

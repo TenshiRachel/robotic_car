@@ -4,4 +4,5 @@
 void ultrasonic_init();
 bool ultrasonic_timer_callback(struct repeating_timer *t);
 
+extern volatile bool blocked;
 #endif

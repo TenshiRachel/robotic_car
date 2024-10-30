@@ -41,7 +41,7 @@ characterSequence all_characters[] = {
 
 int asterisk[9] = {0, 1, 0, 0, 1, 0, 1, 0, 0};
 
-void classify_timings(int8_t *timings_index, int32_t *timings, int8_t *classified_string);
+void classify_timings(int8_t *timings_index, uint32_t *timings, int8_t *classified_string);
 characterValue check_character(int8_t *classified_string, bool reverse_flag);
 characterValue check_asterisk(int8_t *classified_string, bool end_flag, bool *reverse_flag);
 int get_colour(uint32_t result);
@@ -196,9 +196,10 @@ bool process_barcode(struct repeating_timer *t)
             }
         }
     }
+    return true;
 }
 
-void classify_timings(int8_t *timings_index, int32_t *timings, int8_t *classified_string)
+void classify_timings(int8_t *timings_index, uint32_t *timings, int8_t *classified_string)
 {
     // Calculate average of existing timings
     uint32_t sum = 0;

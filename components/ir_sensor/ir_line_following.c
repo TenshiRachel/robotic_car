@@ -39,8 +39,6 @@ void ir_init_linefollow(){
 
 bool read_line()
 {
-    static int8_t current_colour = 3;
-
     uint32_t result = adc_read();
 
     return get_colour_line(result);
@@ -48,6 +46,7 @@ bool read_line()
 
 
 int get_colour_line(uint32_t result) {
+    // printf("ADC Value: %u", result);
     static uint32_t min_adc = 4095;
     static uint32_t max_adc = 0;
     static uint32_t left_threshold = 1365;  // (1/3 of 4095)

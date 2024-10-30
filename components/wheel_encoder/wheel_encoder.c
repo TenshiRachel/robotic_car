@@ -5,7 +5,8 @@
 // IMPORTANT!!! CHANGE BASED ON WHERE ITS PLUGGED FOR ACTUAL
 // #define LEFT_ENCODER_PIN 2
 #define LEFT_ENCODER_PIN 8
-#define RIGHT_ENCODER_PIN 26
+// #define RIGHT_ENCODER_PIN 26
+#define RIGHT_ENCODER_PIN 2
 #define TIMEOUT_MS 1000 // Timeout after 1 second to reset pulse widths
 #define NOTCHES_CM 1.025f // Circumference 21cm, 20 notches, therefore 1 notch approx 20.5/20cm
 
