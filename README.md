@@ -10,6 +10,9 @@ A robotic car with the following features:
 5. Ultrasonic Sensor for Real-time Distance Measurement
 6. Wheel Encoder for Speed and Distance Measurement
 
+### Block Diagram
+![Block Diagram](https://github.com/TenshiRachel/robotic_car/blob/master/block_diagram.png)
+
 ## Project Setup
 
 ### Prerequisites
