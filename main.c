@@ -25,7 +25,7 @@ void ultrasonicTask(__unused void *params){
     add_repeating_timer_ms(100, ultrasonic_timer_callback, NULL, &timer);
     while (1)
     {        
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(portMAX_DELAY);
     }
     
 }
@@ -56,8 +56,8 @@ void irTask(__unused void *params) {
 void vLaunch( void){
     TaskHandle_t ultratask;
     xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 2, &ultratask);
-    TaskHandle_t infraTask;
-    xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
+    // TaskHandle_t infraTask;
+    // xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
 
 #if NO_SYS && configUSE_CORE_AFFINITY && configNUM_CORES > 1
     // we must bind the main task to one core (well at least while the init is called)
@@ -75,7 +75,7 @@ int main(){
 
     // Init components
     ultrasonic_init();
-    wheel_encoder_init();
+    // wheel_encoder_init();
     motor_init();
     ir_init_linefollow();
 
