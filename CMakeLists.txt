@@ -23,6 +23,7 @@ components/ultrasonic/ultrasonic.c
 components/wheel_encoder/wheel_encoder.c
 components/motor_control/motor_control.c
 components/ir_sensor/ir_sensor.c
+components/ir_sensor/ir_line_following.c
 )
 
 target_compile_definitions(robotic_car PRIVATE

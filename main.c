@@ -5,12 +5,18 @@
 #include "components/ultrasonic/ultrasonic.h"
 #include "components/wheel_encoder/wheel_encoder.h"
 #include "components/motor_control/motor_control.h"
-#include "components/ir_sensor/ir_sensor.h"
+// #include "components/ir_sensor/ir_sensor.h"
+#include "components/ir_sensor/ir_line_following.h"
 
 // Lib
 #include "FreeRTOS.h"
 #include "task.h"
 #include "message_buffer.h"
+
+#define WHITE 0
+#define BLACK 1
+#define ON_LINE 2
+
 
 void ultrasonicTask(__unused void *params){
     // Ultrasonic
@@ -24,11 +30,26 @@ void ultrasonicTask(__unused void *params){
     
 }
 
-void irTask(__unused void *params){
-    struct repeating_timer timer;
-    add_repeating_timer_ms(1, process_barcode, NULL, &timer);
-    while (1) {        
-        vTaskDelay(pdMS_TO_TICKS(10));  
+// void irTask(__unused void *params){
+//     struct repeating_timer timer;
+//     add_repeating_timer_ms(10, read_line, NULL, &timer);
+//     while (1) {        
+//         vTaskDelay(pdMS_TO_TICKS(10));  
+//     }
+// }
+
+void irTask(__unused void *params) {
+    while (1) {
+        int line_state = read_line();  // Read sensor data every 10 ms
+
+        // Control motors based on line state if needed
+        if (line_state == WHITE) {
+            printf("too white. turn left/\n");
+        } else if (line_state == BLACK) {
+            printf("too black. turn left/right\n");
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(10));  // Delay 10 ms between readings
     }
 }
 
@@ -56,7 +77,7 @@ int main(){
     ultrasonic_init();
     wheel_encoder_init();
     motor_init();
-    ir_init();
+    ir_init_linefollow();
 
     const char *rtos_name;
     #if ( portSUPPORT_SMP == 1 )

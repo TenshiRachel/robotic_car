@@ -47,7 +47,7 @@ characterValue check_asterisk(int8_t *classified_string, bool end_flag, bool *re
 int get_colour(uint32_t result);
 bool process_barcode(__unused struct repeating_timer *t);
 
-void ir_init(){
+void ir_init_barcode(){
     adc_init();
     adc_gpio_init(GPIO_PIN); // set pin as the gpio adc input
     
@@ -63,7 +63,7 @@ bool process_barcode(struct repeating_timer *t)
     static bool end_flag = false;
     static bool gap_flag = false;
     static bool reverse_flag = false;
-    static char character_read = NULL;
+    static char character_read = '\0';
 
     static absolute_time_t startTime;
     static int8_t timings_index = 0;
@@ -228,7 +228,7 @@ characterValue check_character(int8_t *classified_string, bool reverse_flag)
 {
     characterValue result;
     result.success = false;
-    result.character = NULL;
+    result.character = '\0';
 
     // for each sequence of characters
     for (int i = 0; i < 3; i++)
