@@ -54,8 +54,11 @@ void ir_init_barcode(){
     gpio_set_dir(GPIO_PIN, false);
     gpio_set_function(GPIO_PIN, GPIO_FUNC_SIO);
     adc_select_input(ADC_CHANNEL);
-}
 
+    gpio_init(18);
+    gpio_set_dir(18, GPIO_OUT);
+}
+int state2 = 0;
 bool process_barcode(struct repeating_timer *t)
 {
     static bool read_flag = false;
@@ -80,10 +83,10 @@ bool process_barcode(struct repeating_timer *t)
     }
 
     uint32_t result = adc_read();
-    // printf("ADC Result: %u\n", result); // Use %u for uint32_t
+    // printf("ADC: %u\n", result); // Use %u for uint32_t
     // const float converted_result = result * conversion_factor; // TODO: Optimise without multiplying
     current_colour = get_colour(result);
-    
+
     if (current_colour != colour) {
         // Calculate the pulse duration
         absolute_time_t endTime = get_absolute_time();
@@ -92,18 +95,17 @@ bool process_barcode(struct repeating_timer *t)
         uint32_t timing_ms = pulseDuration / 1000;
         colour = current_colour;
 
-        // if (current_colour == WHITE) {
-        //     printf("Black Duration: %llu ms\n", pulseDuration/1000);
-        // } else {
-        //     printf("White Duration: %llu ms\n", pulseDuration/1000);
-        // }
-
-
         // Skip if too long or too short
         if (timing_ms > 3000 || timing_ms < 5)
         {
             return true;
         }
+
+        // if (current_colour == WHITE) {
+        //     printf("Black Duration: %u ms\n", timing_ms);
+        // } else {
+        //     printf("White Duration: %u ms\n", timing_ms);
+        // }
         
         // Update timing in circular array
         timings[timings_index] = pulseDuration / 1000; 
@@ -125,6 +127,17 @@ bool process_barcode(struct repeating_timer *t)
             if (!read_flag)
             {
                 value = check_asterisk(classified_string, end_flag, &reverse_flag);
+
+                // if(state2 == 0)
+                // {
+                //     state2 = 1;
+                //     gpio_put(18,1);
+                // }
+                // else
+                // {
+                //     state2 = 0;
+                //     gpio_put(18,0);
+                // }
 
                 // if successful, move on to read the actual character
                 if (value.success)
@@ -166,7 +179,7 @@ bool process_barcode(struct repeating_timer *t)
                     }
                     else // RESET EVERYTHING
                     {
-                        // printf("Invalid character. Resetting all\n");
+                        printf("Invalid character. Resetting all\n");
                         read_flag = end_flag = gap_flag = reverse_flag = false;
                     }
                     num_existing_timings = 0;
@@ -180,6 +193,10 @@ bool process_barcode(struct repeating_timer *t)
                     {
                         printf("Successfully read character %c! Resetting to listen for start *.\n", character_read);
                     }
+                    else
+                {
+                    printf("Failed reading end asterisk. Resetting everything.\n");
+                }
                     // Whether success/fail, reset flags and continue listening for start asterisk
                     read_flag = end_flag = gap_flag = reverse_flag = false;
                 }

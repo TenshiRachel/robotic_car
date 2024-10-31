@@ -46,28 +46,50 @@ bool read_line()
 
 
 int get_colour_line(uint32_t result) {
-    // printf("ADC Value: %u", result);
+
     static uint32_t min_adc = 4095;
     static uint32_t max_adc = 0;
-    static uint32_t left_threshold = 1365;  // (1/3 of 4095)
-    static uint32_t right_threshold = 2730; // (2/3 of 4095)
+    static uint32_t contrast_adc = 4095;
 
-    // Dynamically adjust min and max based on readings
-    if (result < min_adc) {
+    if (result < min_adc)
+    {
         min_adc = result;
-    } else if (result > max_adc) {
+        contrast_adc = (uint32_t)((min_adc + max_adc)/2);
+    }
+    else if (result > max_adc)
+    {
         max_adc = result;
+        contrast_adc = (uint32_t)((min_adc + max_adc)/2);
     }
-
-    // Recalculate thresholds based on the updated min and max values
-    left_threshold = min_adc + (max_adc - min_adc) / 3;        // 1/3 of range
-    right_threshold = min_adc + 2 * (max_adc - min_adc) / 3;   // 2/3 of range
-
-    if (result <= left_threshold) {
-        return WHITE;        // Off the line to the left
-    } else if (result >= right_threshold) {
-        return BLACK;        // Off the line to the right
-    } else {
-        return ON_LINE;
+    if (result >= contrast_adc)
+    {
+        return BLACK;
     }
+    else
+    {
+        return WHITE;
+    }    // printf("ADC Value: %u", result);
+    // static uint32_t min_adc = 4095;
+    // static uint32_t max_adc = 0;
+    // static uint32_t left_threshold = 1365;  // (1/3 of 4095)
+    // static uint32_t right_threshold = 2730; // (2/3 of 4095)
+
+    // // Dynamically adjust min and max based on readings
+    // if (result < min_adc) {
+    //     min_adc = result;
+    // } else if (result > max_adc) {
+    //     max_adc = result;
+    // }
+
+    // // Recalculate thresholds based on the updated min and max values
+    // left_threshold = min_adc + (max_adc - min_adc) / 3;        // 1/3 of range
+    // right_threshold = min_adc + 2 * (max_adc - min_adc) / 3;   // 2/3 of range
+
+    // if (result <= left_threshold) {
+    //     return WHITE;        // Off the line to the left
+    // } else if (result >= right_threshold) {
+    //     return BLACK;        // Off the line to the right
+    // } else {
+    //     return ON_LINE;
+    // }
 }

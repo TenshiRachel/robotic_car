@@ -32,7 +32,7 @@ void ultrasonicTask(__unused void *params){
 
 void irBarcodeTask(__unused void *params){
     struct repeating_timer timer;
-    add_repeating_timer_ms(10, process_barcode, NULL, &timer);
+    add_repeating_timer_ms(1, process_barcode, NULL, &timer);
     while (1)
     {        
         vTaskDelay(portMAX_DELAY);
@@ -46,15 +46,16 @@ void irTask(__unused void *params) {
         if (!blocked) {
             // Control motors based on line state if needed
             if (line_state == WHITE) {
-                turn_left(0.4f,0.6f);
+                turn_left(0.45f,0.65f);
             } else if (line_state == BLACK) {
-                turn_right(0.4f,0.6f);
+                turn_right(0.5f,0.7f);
+                // move_forward(0.8f,0.8f);
             } else {
                 move_forward(0.8f,0.8f);
             }
         }
-
-        vTaskDelay(pdMS_TO_TICKS(10));  // Delay 10 ms between readings
+        
+        vTaskDelay(pdMS_TO_TICKS(1));  // Delay ?? ms between readings
     }
 }
 
@@ -86,6 +87,7 @@ int main(){
     ultrasonic_init();
     // wheel_encoder_init();
     motor_init();
+    ir_init_barcode();
     ir_init_linefollow();
 
     const char *rtos_name;
