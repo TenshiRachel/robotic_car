@@ -3,11 +3,11 @@
 #include "hardware/gpio.h"
 #include "hardware/adc.h"
 #include <stdbool.h>
-#include <string.h>
 
 #define WHITE 0
 #define BLACK 1
 #define BARCODE_SIZE 9
+#define THICK_COUNT 3
 #define GPIO_PIN 27
 #define ADC_CHANNEL 1
 
@@ -20,63 +20,62 @@ typedef struct
 typedef struct
 {
     char character;
-    char character_sequence[BARCODE_SIZE];
+    int character_sequence[THICK_COUNT];
 } characterSequence;
 
 
-// void __not_in_flash_func(adc_capture)(uint16_t *buf, size_t count) {
-//     adc_fifo_setup(true, false, 0, false, false);
-//     adc_run(true);
-//     for (int i = 0; i < count; i = i + 1)
-//         buf[i] = adc_fifo_get_blocking();
-//     adc_run(false);
-//     adc_fifo_drain();
-// }
-
 characterSequence all_characters[] = {
-    {'0', "000110100"},
-    {'1', "100100001"},
-    {'2', "001100001"},
-    {'3', "101100000"},
-    {'4', "000110001"},
-    {'5', "100110000"},
-    {'6', "001110000"},
-    {'7', "000100101"},
-    {'8', "100100100"},
-    {'9', "001100100"},
-    {'A', "100001001"}, 
-    {'B', "001001001"},
-    {'C', "101001000"},
-    {'D', "000011001"},
-    {'E', "100011000"},
-    {'F', "001011000"}, 
-    {'G', "000001101"},
-    {'H', "100001100"},
-    {'I', "001001100"},
-    {'J', "000011100"},
-    {'K', "100000011"},
-    {'L', "001000011"},
-    {'M', "101000010"},
-    {'N', "000010011"},
-    {'O', "100010010"},
-    {'P', "001010010"},
-    {'Q', "000000111"},
-    {'R', "100000110"},
-    {'S', "001000110"},
-    {'T', "000010110"},
-    {'U', "110000001"},
-    {'V', "011000001"},
-    {'W', "111000000"},
-    {'X', "010010001"},
-    {'Y', "110010000"},
-    {'Z', "011010000"}
+    {'0', {3,4,6}},
+    {'1', {0,3,8}}, 
+    {'2', {2,3,8}},
+    {'3', {0,2,3}},
+    {'4', {3,4,8}},
+    {'5', {0,3,4}},
+    {'6', {2,3,4}}, 
+    {'7', {3,6,8}},
+    {'8', {0,3,6}}, 
+    {'9', {2,3,6}},
+    {'A', {0,5,8}}, 
+    {'B', {2,5,8}},
+    {'C', {0,2,5}},
+    {'D', {4,5,8}},
+    {'E', {0,4,5}},
+    {'F', {2,4,5}},
+    {'G', {5,6,8}},
+    {'H', {0,5,6}},
+    {'I', {2,5,6}},
+    {'J', {4,5,6}},
+    {'K', {0,7,8}},
+    {'L', {2,7,8}},
+    {'M', {0,2,7}},
+    {'N', {4,7,8}},
+    {'O', {0,4,7}},
+    {'P', {2,4,7}},
+    {'Q', {6,7,8}},
+    {'R', {0,6,7}},
+    {'S', {2,6,7}},
+    {'T', {4,6,7}},
+    {'U', {0,1,8}},
+    {'V', {1,2,8}},
+    {'W', {0,1,2}},
+    {'X', {1,4,8}},
+    {'Y', {0,1,4}},
+    {'Z', {1,2,4}},
+    {'-', {1,6,8}},
+    {'.', {0,1,6}},
+    {' ', {1,2,6}},
+    {'$', {1,3,5}},
+    {'/', {1,3,7}},
+    {'+', {1,5,7}},
+    {'%', {3,5,7}},
+    {'*', {1,4,6}},
 };
 
-char asterisk[9] = {"010010100"};
+characterSequence asterisk = {'*', {1,4,6}};
 
-void classify_timings(int8_t *timings_index, uint32_t *timings, char *classified_string);
-characterValue check_character(char *classified_string, bool reverse_flag);
-characterValue check_asterisk(char *classified_string, bool read_flag, bool end_flag, bool *reverse_flag);
+void classify_timings(int8_t *timings_index, uint32_t *timings, int8_t *classified_string);
+characterValue check_character(int8_t *classified_string, bool reverse_flag);
+characterValue check_asterisk(int8_t *classified_string, bool end_flag, bool *reverse_flag);
 int get_colour(uint32_t result);
 bool process_barcode(__unused struct repeating_timer *t);
 
@@ -89,6 +88,8 @@ void ir_init_barcode(){
     gpio_set_function(GPIO_PIN, GPIO_FUNC_SIO);
     adc_select_input(ADC_CHANNEL);
 
+    gpio_init(18);
+    gpio_set_dir(18, GPIO_OUT);
 }
 int state2 = 0;
 bool process_barcode(struct repeating_timer *t)
@@ -102,7 +103,7 @@ bool process_barcode(struct repeating_timer *t)
     static absolute_time_t startTime;
     static int8_t timings_index = 0;
     static uint32_t timings[BARCODE_SIZE] = {0}; // in milliseconds
-    static char classified_string[BARCODE_SIZE] = {0}; // binary string
+    static int8_t classified_string[THICK_COUNT] = {0}; // array of size 3 showing the indexes
     static int8_t num_existing_timings = 0;
 
     static int8_t colour = 2;
@@ -115,10 +116,8 @@ bool process_barcode(struct repeating_timer *t)
     }
 
     uint32_t result = adc_read();
-    // printf("ADC: %u\n", result); // Use %u for uint32_t
-    // const float converted_result = result * conversion_factor; // TODO: Optimise without multiplying
     current_colour = get_colour(result);
-    // current_colour = gpio_get(27);
+
     if (current_colour != colour) {
         // Calculate the pulse duration
         absolute_time_t endTime = get_absolute_time();
@@ -153,18 +152,12 @@ bool process_barcode(struct repeating_timer *t)
             // Classify the timings into a binary string of 9 values
             classify_timings(&timings_index, timings, classified_string);
 
-            // Print classified string
-            // for (int i = 0; i < BARCODE_SIZE; i++) {
-            //     printf("%c", classified_string[i]);
-            // }
-            // printf("\n");
-
             characterValue value;
 
             // If already read but hasn't ended, check for character
             if (!read_flag)
             {
-                value = check_asterisk(classified_string, read_flag, end_flag, &reverse_flag);
+                value = check_asterisk(classified_string, end_flag, &reverse_flag);
 
                 // if(state2 == 0)
                 // {
@@ -213,7 +206,7 @@ bool process_barcode(struct repeating_timer *t)
                         end_flag = true; // signal to go detect for end character
                         gap_flag = true; // set flag to skip the gap pulse
                         character_read = value.character;
-                        printf("Read a character %c! Now listening for end *.\n", character_read);
+                        printf("Read a character! Now listening for end *.\n");
                     }
                     else // RESET EVERYTHING
                     {
@@ -226,7 +219,7 @@ bool process_barcode(struct repeating_timer *t)
                 // read end asterisk
                 else
                 {
-                    value = check_asterisk(classified_string, read_flag, end_flag, &reverse_flag);
+                    value = check_asterisk(classified_string, end_flag, &reverse_flag);
                     if (value.success)
                     {
                         printf("Successfully read character %c! Resetting to listen for start *.\n", character_read);
@@ -245,211 +238,162 @@ bool process_barcode(struct repeating_timer *t)
     return true;
 }
 
-void classify_timings(int8_t *timings_index, uint32_t *timings, char *classified_string)
+void classify_timings(int8_t *timings_index, uint32_t *timings, int8_t *classified_string)
 {
-    // Calculate average of existing timings
-    uint32_t sum = 0;
+    uint32_t top_timings[3] = {0};
+    int8_t top_indexes[3] = {-1, -1, -1};
+
     for (int i = 0; i < BARCODE_SIZE; i++)
     {
-        sum += timings[i];
+        for (int j = 0; j < 3; j++) {
+            // if current timing is bigger than one of the top timings
+            if (timings[i] > top_timings[j])
+            {
+                // move timings backwards
+                for (int k = 2; k > j; k--)
+                {
+                    top_timings[k] = top_timings[k - 1];
+                    top_indexes[k] = top_indexes[k - 1];
+                }
+                // slot in current timing in this position
+                top_timings[j] = timings[i];
+                top_indexes[j] = timings_index[i];
+                break;
+            }
+        }
     }
 
-    uint32_t average = sum / BARCODE_SIZE;
 
+    // sort indexes in numerical order
+    for (int i = 0; i < 2; i++) {
+        for (int j = i + 1; j < 3; j++) {
+            if (top_indexes[i] > top_indexes[j]) {
+                int8_t temp_index = top_indexes[i];
+                top_indexes[i] = top_indexes[j];
+                top_indexes[j] = temp_index;
+            }
+        }
+    }
 
-    for (int i = 0; i < BARCODE_SIZE; i++)
-    {
-        int index = (*timings_index + i) % BARCODE_SIZE;
-        if (timings[index] > average)
-        {
-            classified_string[i] = '1';
-        }
-        else
-        {
-            classified_string[i] = '0';
-        }
+    // insert into classified string
+    for (int i = 0; i < 3; i++) {
+        classified_string[i] = top_indexes[i];
     }
 }
 
-characterValue check_character(char *classified_string, bool reverse_flag)
+characterValue check_character(int8_t *classified_string, bool reverse_flag)
 {
     characterValue result;
     result.success = false;
     result.character = '\0';
-    unsigned int barcode_size = BARCODE_SIZE;
-    
-    char temp_classified_string[BARCODE_SIZE];
-
-    if (reverse_flag)
-    {
-        for (int i = 0; i < BARCODE_SIZE; i++)
-        {
-            temp_classified_string[i] = classified_string[BARCODE_SIZE - 1 - i];
-        }
-    }
-    else
-    {
-        for (int i = 0; i < BARCODE_SIZE; i++)
-        {
-            temp_classified_string[i] = classified_string[i];
-        }
-    }
 
     // for each sequence of characters
-    for (int i = 0; i < sizeof(all_characters) / sizeof(all_characters[0]); i++)
+    for (int i = 0; i < 3; i++)
     {
-        if (memcmp(temp_classified_string, all_characters[i].character_sequence, barcode_size) == 0)
+        // assume it's a match first
+        result.success = true;
+        result.character = all_characters[i].character;
+
+
+        if (!reverse_flag)
         {
-            result.success = true;
-            result.character = all_characters[i].character;
+            // check thick line match
+            for (int j = 0; j < 9; j++)
+            {
+                // break to go to next sequence if it is not a match
+                if (all_characters[i].character_sequence[j] != classified_string[j])
+                {
+                    result.success = false;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            // check every character
+            for (int j = 0; j < 9; j++)
+            {
+                // break to go to next sequence if it is not a match
+                if (all_characters[i].character_sequence[j] != classified_string[9 - 1 - j])
+                {
+                    result.success = false;
+                    break;
+                }
+            } 
+        }
+        
+        // if it is still a success after all characters, this is A MATCH!
+        if (result.success)
+        {
             return result;
         }
-        // // assume it's a match first
-        // result.success = true;
-        // result.character = all_characters[i].character;
-
-        // if (!reverse_flag)
-        // {
-        //     // check every character
-        //     for (int j = 0; j < 9; j++)
-        //     {
-        //         // break to go to next sequence if it is not a match
-        //         if (all_characters[i].character_sequence[j] != classified_string[j])
-        //         {
-        //             result.success = false;
-        //             break;
-        //         }
-        //     }
-        // }
-        // else
-        // {
-        //     // check every character
-        //     for (int j = 0; j < 9; j++)
-        //     {
-        //         // break to go to next sequence if it is not a match
-        //         if (all_characters[i].character_sequence[j] != classified_string[9 - 1 - j])
-        //         {
-        //             result.success = false;
-        //             break;
-        //         }
-        //     } 
-        // }
-        
-        // // if it is still a success after all characters, this is A MATCH!
-        // if (result.success)
-        // {
-        //     return result;
-        // }
     }
     return result;
 }
 
-characterValue check_asterisk(char *classified_string, bool read_flag, bool end_flag, bool *reverse_flag)
+characterValue check_asterisk(int8_t *classified_string, bool end_flag, bool *reverse_flag)
 {
     characterValue result;
-    result.success = false;
+    result.success = true;
     result.character = '*';
-    unsigned int barcode_size = BARCODE_SIZE;
 
-    char temp_classified_string[BARCODE_SIZE];
-    char temp_reversed_string[BARCODE_SIZE];
-
-    for (int i = 0; i < BARCODE_SIZE; i++)
+    // If it's the end, reverse is already decided
+    if (end_flag && *reverse_flag)
     {
-        temp_classified_string[i] = classified_string[i];
-    }
-
-    for (int i = 0; i < BARCODE_SIZE; i++)
-    {
-        temp_reversed_string[i] = classified_string[BARCODE_SIZE - 1 - i];
-    }
-
-    // It is the first asterisk being read
-    if (!read_flag)
-    {
-        // Check normal position
-        if (memcmp(temp_classified_string, asterisk, barcode_size) == 0)
+        for (int i = 0; i < 9; i++)
         {
-            result.success = true;
+            if (asterisk[i] != classified_string[9 - 1 - i])
+            {
+                result.success = false;
+                break;
+            }
         }
-
-        // Check reversed position
-        else if (memcmp(temp_reversed_string, asterisk, barcode_size) == 0)
-        {
-            result.success = true;
-            *reverse_flag = true;
-        }
+        return result;
     }
 
-    // Reading end asterisk now, reverse direction should have been decided
-    else
+    // If it's the end and there is no reverse decided at the start
+    if (end_flag && !*reverse_flag)
     {
-    if ((*reverse_flag && (memcmp(temp_reversed_string, asterisk, barcode_size) == 0)) ||
-        (!*reverse_flag && (memcmp(temp_classified_string, asterisk, barcode_size) == 0)))
+        for (int i = 0; i < 9; i++)
         {
-            result.success = true;
+            if (asterisk[i] != classified_string[i])
+            {
+                result.success = false;
+                break;
+            }
+        }
+        return result;
+    }
+
+    // If it is not the end (reverse has not been decided), try both
+    // Try normal way first
+    for (int i = 0; i < 9; i++)
+    {
+        if (asterisk[i] != classified_string[i])
+        {
+            result.success = false;
+            break;
         }
     }
+    // if successful, return result
+    if (result.success)
+    {
+        return result;
+    }
 
-    return result;
-
-    // // If it's the end, reverse is already decided
-    // if (end_flag && *reverse_flag)
-    // {
-    //     for (int i = 0; i < 9; i++)
-    //     {
-    //         if (asterisk[i] != classified_string[9 - 1 - i])
-    //         {
-    //             result.success = false;
-    //             break;
-    //         }
-    //     }
-    //     return result;
-    // }
-
-    // // If it's the end and there is no reverse decided at the start
-    // if (end_flag && !*reverse_flag)
-    // {
-    //     for (int i = 0; i < 9; i++)
-    //     {
-    //         if (asterisk[i] != classified_string[i])
-    //         {
-    //             result.success = false;
-    //             break;
-    //         }
-    //     }
-    //     return result;
-    // }
-
-    // // If it is not the end (reverse has not been decided), try both
-    // // Try normal way first
-    // for (int i = 0; i < 9; i++)
-    // {
-    //     if (asterisk[i] != classified_string[i])
-    //     {
-    //         result.success = false;
-    //         break;
-    //     }
-    // }
-    // // if successful, return result
-    // if (result.success)
-    // {
-    //     return result;
-    // }
-
-    // // Otherwise try reverse version
-    // result.success = true;
-    // for (int i = 0; i < 9; i++)
-    // {
-    //     if (asterisk[i] != classified_string[9 - 1 - i])
-    //     {
-    //         // if not successful at any point, there is no match
-    //         result.success = false;
-    //         return result;
-    //     }
-    // }
-    // // reached here, which means there is a successful match, hence set reverse flag
-    // *reverse_flag = true;
+    // Otherwise try reverse version
+    result.success = true;
+    for (int i = 0; i < 9; i++)
+    {
+        if (asterisk[i] != classified_string[9 - 1 - i])
+        {
+            // if not successful at any point, there is no match
+            result.success = false;
+            return result;
+        }
+    }
+    // reached here, which means there is a successful match, hence set reverse flag
+    *reverse_flag = true;
     return result;
 }
 
