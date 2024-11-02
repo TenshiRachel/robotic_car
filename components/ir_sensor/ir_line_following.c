@@ -8,8 +8,8 @@ int state = 3;
 #define WHITE 0
 #define BLACK 1
 #define ON_LINE 2
-#define GPIO_PIN 26
-#define ADC_CHANNEL 0
+#define GPIO_PIN 27
+// #define ADC_CHANNEL 1
 
 #include "ir_line_following.h"
 int get_colour_line(uint32_t result);
@@ -27,26 +27,26 @@ int get_colour_line(uint32_t result);
 
 
 void ir_init_linefollow(){
-    adc_init();
-    adc_gpio_init(GPIO_PIN); // set pin as the gpio adc input
+    // adc_init();
+    // adc_gpio_init(GPIO_PIN); // set pin as the gpio adc input
     
 
     gpio_set_dir(GPIO_PIN, false);
     gpio_set_function(GPIO_PIN, GPIO_FUNC_SIO);
-    adc_select_input(ADC_CHANNEL);
+    // adc_select_input(ADC_CHANNEL);
 }
 
 
 bool read_line()
 {
-    uint32_t result = adc_read();
+    return gpio_get(GPIO_PIN);
+    // uint32_t result = adc_read();
 
-    return get_colour_line(result);
+    // return get_colour_line(result);
 }
 
 
 int get_colour_line(uint32_t result) {
-
     static uint32_t min_adc = 4095;
     static uint32_t max_adc = 0;
     static uint32_t contrast_adc = 4095;

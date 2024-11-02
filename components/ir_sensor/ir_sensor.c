@@ -8,8 +8,8 @@
 #define WHITE 0
 #define BLACK 1
 #define BARCODE_SIZE 9
-#define GPIO_PIN 27
-#define ADC_CHANNEL 1
+#define GPIO_PIN 26
+#define ADC_CHANNEL 0
 
 typedef struct
 {
