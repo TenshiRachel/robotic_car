@@ -102,8 +102,10 @@ int main(){
     sleep_ms(3000);
 
     // Init components
-    ultrasonic_init();
+    // swapped wheel encoder and ultrasonic init!
     wheel_encoder_init();
+    ultrasonic_init();
+    
     motor_init();
     // ir_init_barcode();
     // ir_init_linefollow();
