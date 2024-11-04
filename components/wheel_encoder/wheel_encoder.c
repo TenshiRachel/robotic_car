@@ -2,6 +2,8 @@
 #include "hardware/gpio.h"
 #include <stdio.h>
 
+#include "components/motor_control/motor_control.h"
+#include "components/ultrasonic/ultrasonic.h"
 // IMPORTANT!!! CHANGE BASED ON WHERE ITS PLUGGED FOR ACTUAL
 // #define LEFT_ENCODER_PIN 2
 #define LEFT_ENCODER_PIN 8
@@ -10,8 +12,13 @@
 #define TIMEOUT_MS 1000 // Timeout after 1 second to reset pulse widths
 #define NOTCHES_CM 1.025f // Circumference 21cm, 20 notches, therefore 1 notch approx 20.5/20cm
 
-static uint32_t pulses_left = 0;
-static uint32_t pulses_right = 0;
+// changed  to volatile for extern
+volatile uint32_t pulses_left = 0;
+volatile uint32_t pulses_right = 0;
+// john 
+volatile float left_speed = 0;
+volatile float right_speed = 0;
+
 static float pulse_width_left, pulse_width_right;
 static absolute_time_t last_time_left, last_time_right;
 static volatile float speed;
@@ -21,8 +28,8 @@ void set_speed_distance(){
     // Get average 
     total_distance += ((pulses_left + pulses_right) / 2) * NOTCHES_CM;
 
-    float left_speed = (pulse_width_left > 0) ? NOTCHES_CM/pulse_width_left : 0;
-    float right_speed = (pulse_width_right > 0) ? NOTCHES_CM/pulse_width_right : 0;
+    left_speed = (pulse_width_left > 0) ? NOTCHES_CM/pulse_width_left : 0;
+    right_speed = (pulse_width_right > 0) ? NOTCHES_CM/pulse_width_right : 0;
     // printf("Speed left: %.2fcm/s\n", left_speed);
     // printf("Speed right: %.2fcm/s\n", right_speed);
 
@@ -43,8 +50,23 @@ void encoder_irq_callback(uint gpio, uint32_t events){
                 pulse_width_left = (float) (time_diff/1000000.0f); // Convert to seconds
                 // printf("Pulse width left: %f\n", pulse_width_left);
             }
+            // printf("Pulses Left: %u\n", pulses_left);
 
             last_time_left = current_time;
+            // uint32_t pulse_required = 9;
+            // if (pulses_left >= pulse_required)
+            // {
+            //     stop_motors();
+            // }
+            if (blocked)
+            {
+                uint32_t pulses_required = pulses_left + 9;
+                if (pulses_left >= pulses_required)
+                {
+                    move_forward(0.55f,0.5f);
+                }
+            }
+
         }
         if (gpio == RIGHT_ENCODER_PIN){
             pulses_right++;
@@ -61,6 +83,7 @@ void encoder_irq_callback(uint gpio, uint32_t events){
             last_time_right = current_time;
         }
         set_speed_distance();
+
         // printf("Speed: %.2f cm/s\nDistance travelled: %.2fcm\n", speed, total_distance);
     }
 

@@ -64,8 +64,7 @@ void echo_callback(uint gpio, uint32_t events){
             // printf("Distance to obstacle: %.2f\n", obstacle_distance);
             if (obstacle_distance <= SAFETY_THRESHOLD && !blocked){
                 stop_motors();
-                // sleep_ms(1000);
-                // turn_right(0.6f,0.4f);
+                turn_right(0.6f,0.4f);
                 blocked = true;
             }
 
