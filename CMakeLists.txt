@@ -24,6 +24,7 @@ components/wheel_encoder/wheel_encoder.c
 components/motor_control/motor_control.c
 components/ir_sensor/ir_sensor.c
 components/ir_sensor/ir_line_following.c
+components/wifi/car/wifi.c
 )
 
 target_compile_definitions(robotic_car PRIVATE

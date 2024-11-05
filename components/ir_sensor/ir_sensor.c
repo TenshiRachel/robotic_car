@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "components/wifi/car/wifi.h"
+
 #define WHITE 0
 #define BLACK 1
 #define BARCODE_SIZE 9
@@ -89,6 +91,8 @@ void ir_init_barcode(){
     gpio_set_function(GPIO_PIN, GPIO_FUNC_SIO);
     adc_select_input(ADC_CHANNEL);
 
+    // gpio_init(18);
+    // gpio_set_dir(18, GPIO_OUT);
 }
 int state2 = 0;
 bool process_barcode(struct repeating_timer *t)
@@ -107,13 +111,24 @@ bool process_barcode(struct repeating_timer *t)
 
     static int8_t colour = 2;
     static int8_t current_colour = 3;
+    char message[48] = {0};
+
+    // if(state2 == 0)
+    // {
+    //     state2 = 1;
+    //     gpio_put(18,1);
+    // }
+    // else
+    // {
+    //     state2 = 0;
+    //     gpio_put(18,0);
+    // }
 
     static bool first_call = true;
     if (first_call) {
         startTime = get_absolute_time();
         first_call = false;
     }
-
     uint32_t result = adc_read();
     // printf("ADC: %u\n", result); // Use %u for uint32_t
     // const float converted_result = result * conversion_factor; // TODO: Optimise without multiplying
@@ -182,8 +197,9 @@ bool process_barcode(struct repeating_timer *t)
                 {
                     read_flag = true; // set flag to read the character
                     gap_flag = true; // set flag to skip the gap pulse
-                    printf("Found start * successfully!\n");
-
+                    //printf("Found start * successfully!\n");
+                    char msg[] = "Found start * successfully!\n";
+                    SendToMessageBuffer(msg, sizeof(msg), 0);
                     // reset array to no timings
                     num_existing_timings = 0;
                 }
@@ -197,7 +213,9 @@ bool process_barcode(struct repeating_timer *t)
                 if (gap_flag)
                 {
                     gap_flag = false;
-                    printf("Skip gap pulse!\n");
+                    //printf("Skip gap pulse!\n");
+                    char msg[] = "Skip gap pulse!\n";
+                    SendToMessageBuffer(msg, sizeof(msg), 0);
                     return true;
                 }
                 
@@ -213,11 +231,16 @@ bool process_barcode(struct repeating_timer *t)
                         end_flag = true; // signal to go detect for end character
                         gap_flag = true; // set flag to skip the gap pulse
                         character_read = value.character;
-                        printf("Read a character %c! Now listening for end *.\n", character_read);
+                        //printf("Read a character %c! Now listening for end *.\n", character_read);
+
+                        snprintf(message, sizeof(message), "Read a character %c! Now listening for end *.\n", character_read);
+                        SendToMessageBuffer(message, sizeof(message), 0);
                     }
                     else // RESET EVERYTHING
                     {
-                        printf("Invalid character. Resetting all\n");
+                        char msg[] = "Invalid character. Resetting all\n";
+                        SendToMessageBuffer(msg, sizeof(msg), 0);
+                        //printf("Invalid character. Resetting all\n");
                         read_flag = end_flag = gap_flag = reverse_flag = false;
                     }
                     num_existing_timings = 0;
@@ -229,7 +252,9 @@ bool process_barcode(struct repeating_timer *t)
                     value = check_asterisk(classified_string, read_flag, end_flag, &reverse_flag);
                     if (value.success)
                     {
-                        printf("Successfully read character %c! Resetting to listen for start *.\n", character_read);
+                        snprintf(message, sizeof(message), "Successfully read character %c! Resetting to listen for start *.\n", character_read);
+                        SendToMessageBuffer(message, sizeof(message), 0);
+                        //printf("Successfully read character %c! Resetting to listen for start *.\n", character_read);
                     }
                     else
                 {

@@ -13,14 +13,16 @@
 
 #include "lwip/ip4_addr.h"
 
-#include "FreeRTOS.h"
-#include "task.h"
+// #include "FreeRTOS.h"
+// #include "message_buffer.h"
+// #include "task.h"
 
 #include "lwip/apps/lwiperf.h"
 #include "lwip/ip4_addr.h"
 #include "lwip/netif.h"
 #include <lwip/sockets.h>
 #include "lwipopts.h"
+#include "wifi.h"
 
 #ifndef PING_ADDR
 #define PING_ADDR "192.168.137.1"
@@ -31,62 +33,86 @@
 
 #define LWIP_SOCKET 1
 #define TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 1UL)
+#define mbaTASK_MESSAGE_BUFFER_SIZE (80) // message buffer size, increase as needed based on individual message size
+
 #define BUF_SIZE 96
 
 #define MESSAGE "Message from Pico!"
+#define TARGET_IP "192.168.4.2" // Replace with the specific IP address of your computer (can be found using)
+#define TARGET_PORT 8000          // Replace with the desired target port
 
+static struct sockaddr_in target_addr;
+static int sock;
 int conn_sock;
 int num_stas;
 uint8_t macs;
 cyw43_t self;
+static MessageBufferHandle_t xSendMessageBuffer = NULL;
 
-void sendTask(__unused void *params)
+// Function to initialize the message buffer
+void InitMessageBuffer(void)
 {
+    if (xSendMessageBuffer == NULL)
+    { // Ensure it is only created once
+        xSendMessageBuffer = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+        configASSERT(xSendMessageBuffer); // Check creation success
+    }
 }
 
-void run_broadcast()
+// Access functions for sending and receiving data
+BaseType_t SendToMessageBuffer(const void *data, size_t size, TickType_t ticksToWait)
 {
-        //Create a UDP socket
-        int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        if (sock < 0)
+    return xMessageBufferSend(xSendMessageBuffer, data, size, ticksToWait);
+}
+
+size_t ReceiveFromMessageBuffer(void *data, size_t maxSize, TickType_t ticksToWait)
+{
+    return xMessageBufferReceive(xSendMessageBuffer, data, maxSize, ticksToWait);
+}
+
+void send_data_task(__unused void *params)
+{
+    static char sReceivedData[40] = {0};
+    size_t xReceivedBytes;
+
+    while (1)
+    {
+        // xReceivedBytes = xMessageBufferReceive(
+        //     xSendMessageBuffer,     /* The message buffer to receive from. */
+        //     (void *)&sReceivedData, /* Location to store received data. */
+        //     sizeof(sReceivedData),  /* Maximum number of bytes to receive. */
+        //     portMAX_DELAY);         /* Wait forever until something is received */
+        ReceiveFromMessageBuffer(sReceivedData, sizeof(sReceivedData), portMAX_DELAY);
+
+        // Send the message to the target address
+        int result = sendto(sock, sReceivedData, strlen(sReceivedData), 0, (struct sockaddr *)&target_addr, sizeof(target_addr));
+        if (result < 0)
         {
-            printf("Failed to create socket: error %d\n", errno);
-            return;
+            printf("Failed to send message: error %d\n", errno);
         }
+    }
 
-        // Enable broadcast option on the socket
-        int broadcast_enable = 1;
-        if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) < 0)
-        {
-            printf("Failed to enable broadcast: error %d\n", errno);
-            //close(conn_sock);
-            return;
-        }
-        
-        // Set up the destination broadcast address
-        struct sockaddr_in broadcast_addr;
-        memset(&broadcast_addr, 0, sizeof(broadcast_addr));
-        broadcast_addr.sin_family = AF_INET;
-        broadcast_addr.sin_port = htons(8000);
-        broadcast_addr.sin_addr.s_addr = inet_addr("255.255.255.255");
+    // Close the socket
+    close(sock);
+}
 
-        while(1) {
-            // Send the message to the broadcast address
-            int result = sendto(sock, MESSAGE, strlen(MESSAGE), 0, (struct sockaddr *)&broadcast_addr, sizeof(broadcast_addr));
-            if (result < 0)
-            {
-                printf("Failed to send broadcast: error %d\n", errno);
-            }
-            else
-            {
-                printf("Broadcast message sent successfully\n");
-            }
-            sleep_ms(1000);
-        }
-        
+int create_socket()
+{
+    // Create a UDP socket
+    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sock < 0)
+    {
+        printf("Failed to create socket: error %d\n", errno);
+        return 0;
+    }
 
-        // Close the socket
-        //close(conn_sock);
+    // Set up the destination address
+    memset(&target_addr, 0, sizeof(target_addr));
+    target_addr.sin_family = AF_INET;
+    target_addr.sin_port = htons(8000);
+    target_addr.sin_addr.s_addr = inet_addr(TARGET_IP);
+
+    return 1;
 }
 
 static void run_server()
@@ -188,11 +214,7 @@ static void run_server()
     //close(conn_sock);
 }
 
-void broadcastTask(__unused void *params) {
-    run_broadcast();
-}
-
-void main_task(__unused void *params)
+void wifi_and_server_task(__unused void *params)
 {
     if (cyw43_arch_init())
     {
@@ -211,63 +233,22 @@ void main_task(__unused void *params)
     // {
     //     printf("Connected.\n");
     // }
-    const char *ap_name = "picow_test";
+    const char *ap_name = "picow_p5a";
 #if 1
     const char *password = "password";
 #else
     const char *password = NULL;
 #endif
     cyw43_arch_enable_ap_mode(ap_name, password, CYW43_AUTH_WPA2_AES_PSK); // use the pico as a wifi access point
-    
+
     // TaskHandle_t broadcast_task;
     // xTaskCreate(broadcastTask, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, &broadcast_task);
+    
+    TaskHandle_t telemetry_task;
+    xTaskCreate(send_data_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &telemetry_task);
 
+    create_socket();
     run_server();
 
-    
     cyw43_arch_deinit(); // should never reach here unless error!!
-}
-
-void vLaunch(void)
-{
-    TaskHandle_t task;
-    xTaskCreate(main_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, &task);
-
-#if NO_SYS && configUSE_CORE_AFFINITY && configNUMBER_OF_CORES > 1
-    // we must bind the main task to one core (well at least while the init is called)
-    // (note we only do this in NO_SYS mode, because cyw43_arch_freertos
-    // takes care of it otherwise)
-    vTaskCoreAffinitySet(task, 1);
-#endif
-
-    /* Start the tasks and timer running. */
-    vTaskStartScheduler();
-}
-
-int main(void)
-{
-    stdio_init_all();
-
-    /* Configure the hardware ready to run the demo. */
-    const char *rtos_name;
-#if (configNUMBER_OF_CORES > 1)
-    rtos_name = "FreeRTOS SMP";
-#else
-    rtos_name = "FreeRTOS";
-#endif
-
-#if (configNUMBER_OF_CORES == 2)
-    printf("Starting %s on both cores:\n", rtos_name);
-    vLaunch();
-#elif (RUN_FREERTOS_ON_CORE == 1)
-    printf("Starting %s on core 1:\n", rtos_name);
-    multicore_launch_core1(vLaunch);
-    while (true)
-        ;
-#else
-    sleep_ms(3500);
-    printf("Starting %s on core 0:\n", rtos_name);
-    vLaunch();
-#endif
-    return 0;
 }

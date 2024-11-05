@@ -9,14 +9,14 @@
 #include "components/ir_sensor/ir_line_following.h"
 
 // Lib
-#include "FreeRTOS.h"
-#include "task.h"
-#include "message_buffer.h"
-
+// #include "FreeRTOS.h"
+// #include "task.h"
+// #include "message_buffer.h"
+#include "components/wifi/car/wifi.h"
 #define WHITE 0
 #define BLACK 1
 #define ON_LINE 2
-
+#define mbaTASK_MESSAGE_BUFFER_SIZE (80) // message buffer size, increase as needed based on individual message size
 
 void ultrasonicTask(__unused void *params){
     // Ultrasonic
@@ -74,15 +74,24 @@ void irTask(__unused void *params) {
 //     }
 // }
 
+void main_task(__unused void *params)
+{
+    
+}
 void vLaunch( void){
     // TaskHandle_t ultratask;
     // xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 5, &ultratask);
+    InitMessageBuffer();
 
     TaskHandle_t infraTask;
-    xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
+    xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 2, &infraTask);
 
     TaskHandle_t infraBarCodeTask;
-    xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
+    xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 1, &infraBarCodeTask);
+
+    TaskHandle_t task;
+    xTaskCreate(wifi_and_server_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 3, &task);
+
     // TaskHandle_t pulseTask;
     // xTaskCreate(pulsesTask, "pulseThread", configMINIMAL_STACK_SIZE, NULL, 2, &pulseTask);
 
@@ -105,7 +114,7 @@ int main(){
     // swapped wheel encoder and ultrasonic init!
     // wheel_encoder_init();
     // ultrasonic_init();
-    
+
     motor_init();
     ir_init_barcode();
     ir_init_linefollow();
