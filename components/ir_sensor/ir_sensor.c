@@ -304,42 +304,6 @@ characterValue check_character(char *classified_string, bool reverse_flag)
             result.character = all_characters[i].character;
             return result;
         }
-        // // assume it's a match first
-        // result.success = true;
-        // result.character = all_characters[i].character;
-
-        // if (!reverse_flag)
-        // {
-        //     // check every character
-        //     for (int j = 0; j < 9; j++)
-        //     {
-        //         // break to go to next sequence if it is not a match
-        //         if (all_characters[i].character_sequence[j] != classified_string[j])
-        //         {
-        //             result.success = false;
-        //             break;
-        //         }
-        //     }
-        // }
-        // else
-        // {
-        //     // check every character
-        //     for (int j = 0; j < 9; j++)
-        //     {
-        //         // break to go to next sequence if it is not a match
-        //         if (all_characters[i].character_sequence[j] != classified_string[9 - 1 - j])
-        //         {
-        //             result.success = false;
-        //             break;
-        //         }
-        //     } 
-        // }
-        
-        // // if it is still a success after all characters, this is A MATCH!
-        // if (result.success)
-        // {
-        //     return result;
-        // }
     }
     return result;
 }
@@ -382,14 +346,12 @@ characterValue check_asterisk(char *classified_string, bool read_flag, bool end_
     }
 
     // Reading end asterisk now, reverse direction should have been decided
-    else
+    else if ((*reverse_flag && (memcmp(temp_reversed_string, asterisk, barcode_size) == 0)) ||
+            (!*reverse_flag && (memcmp(temp_classified_string, asterisk, barcode_size) == 0)))
     {
-    if ((*reverse_flag && (memcmp(temp_reversed_string, asterisk, barcode_size) == 0)) ||
-        (!*reverse_flag && (memcmp(temp_classified_string, asterisk, barcode_size) == 0)))
-        {
-            result.success = true;
-        }
+        result.success = true;
     }
+
 
     return result;
 
