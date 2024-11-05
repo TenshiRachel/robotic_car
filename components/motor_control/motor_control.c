@@ -23,9 +23,11 @@
 // Define GPIO pin for interrupt (for Week 8 Demo)
 #define BTN_PIN 21
 #define DEBOUNCE_TIME 200  // milliseconds
-static absolute_time_t last_press_time;
-static int motor_action_index = 0; // State variable to track the current action
 
+
+
+// Boolean 
+volatile bool is_moving = false;
 // Function to set up the PWM
 void setup_pwm(uint gpio, float freq, float duty_cycle) {
     // Set the GPIO function to PWM
@@ -115,7 +117,7 @@ void stop_motors() {
     gpio_put(DIR_PIN_A2, 0);
     gpio_put(DIR_PIN_B1, 0);
     gpio_put(DIR_PIN_B2, 0);
-    printf("stopping\n");
+    is_moving = false;
 }
 
 
@@ -133,63 +135,25 @@ void turn_right(float duty_cycle_A, float duty_cycle_B){
     // printf("turning\n");
 }
 
-// // GPIO interrupt callback function (Week 8 Demo)
-// void motor_callback(uint gpio, uint32_t events) {
-//     absolute_time_t current_time = get_absolute_time();
-
-//     if (events & GPIO_IRQ_EDGE_FALL) {  // Button pressed
-//         if (absolute_time_diff_us(last_press_time, current_time) < DEBOUNCE_TIME * 1000) {
-//             return;  // Ignore if too soon
-//         }
-//         last_press_time = current_time;  // Update last pressed time
-
-//         // Call the function based on the current index
-//         switch (motor_action_index) {
-//             case 0:
-//                 move_forward(0.5f, 0.5f);  // Move forward
-//                 break;
-//             case 1:
-//                 stop_motors();
-//                 break;
-//             // case 2:
-//             //     move_forward(0.4f,0.4f); // move forward slower
-//             //     break;
-//             // case 3:
-//             //     move_backward(0.5f, 0.5f); // Move backward
-//             //     break;
-//             // case 4:
-//             //     move_backward(0.8f,0.8f); // move backward faster
-//             //     break;
-//             // case 5:
-//             //     move_backward(0.4f,0.4f); // move backward slower
-//             //     break;                
-//             // case 6:
-//             //     stop_motors();             // Stop motors
-//             //     break;
-//             // case 7:
-//             //     turn_left(0.5f, 0.4f);     // Turn left
-//             //     break;
-//             // case 8:
-//             //     turn_right(0.4f, 0.5f);    // Turn right
-//             //     break;
-//         }
-
-//         // Update the action index, wrapping around if necessary
-//         motor_action_index = (motor_action_index + 1) % 2;
-//     }
-// }
-
 
 // PID stuff
 
 // PID constants (definition by discussion forum hero)
 // !! TO BE ADJUSTED BASED ON ACTUAL MOVEMENT
-// float Kp = 0.78f; // Proportional: used to correct how far current is from the setpoint
+// float Kp = 0.75f; // Proportional: used to correct how far current is from the setpoint
 // float Ki = 0.07f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
-// float Kd = 0.015f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
-float Kp = 1.5f; // Proportional: used to correct how far current is from the setpoint
-float Ki = 0.0f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
-float Kd = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
+// float Kd = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
+// float Kp = 1.5f; // Proportional: used to correct how far current is from the setpoint
+// float Ki = 0.0f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
+// float Kd = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
+float KpLeft = 0.21f; // Proportional: used to correct how far current is from the setpoint
+float KiLeft = 0.03f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
+float KdLeft = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
+
+float KpRight= 0.295f; // Proportional: used to correct how far current is from the setpoint
+float KiRight = 0.03f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
+float KdRight = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
+
 // Motor A and B 
 // track prev error and integral of respective motors
 float previous_error_motorA = 0.0f;
@@ -202,9 +166,8 @@ float integral_motorB = 0.0f;
 float target_speed_motorA = 0.0f;
 float target_speed_motorB = 0.0f;
 
-
-// Function to compute the control signal
-float compute_pid(float setpoint, float current_value, float *integral, float *prev_error) {
+// // Function to compute the control signal FAUZI
+float compute_pid(float setpoint, float current_value, float *integral, float *prev_error, float Kp, float Ki, float Kd) {
 
     float error = setpoint - current_value;
     
@@ -217,57 +180,145 @@ float compute_pid(float setpoint, float current_value, float *integral, float *p
     *prev_error = error;
 
     // set boundary so that calculated signal will be within PWM range
-    // UNSURE , NEED TO TEST 
+    // // UNSURE , NEED TO TEST 
     if (control_signal >= 1.0f)
     {
         control_signal = 0.99f;
+        *integral = 0;
     }
     else if (control_signal < 0.0f)
     {
         control_signal = 0.0f;
+        *integral = 0;
     }
 
-    printf(" Control Signal = %f, Current Position = %f\n", control_signal, current_value); // error: Control Signal = %f because it is float not decimal
+
+
+    printf(" Control Signal = %f, Current Position = %f, Integral = %f , Error = %f\n", control_signal, current_value, *integral, error); // error: Control Signal = %f because it is float not decimal
 
     return control_signal;
 }
+
+// float pid_calculate(float target, float actual, float *integral, float *prev_error) {
+//     float Kp = 1.2;
+//     float Ki = 0.05;
+//     float Kd = 0.01;
+//     float MAX_INTEGRAL = 10.0; 
+
+//     float error = target - actual;
+//     *integral += error;
+
+//     if (*integral > MAX_INTEGRAL) *integral = MAX_INTEGRAL;
+//     if (*integral < -MAX_INTEGRAL) *integral = -MAX_INTEGRAL;
+
+//     float derivative = error - *prev_error;
+//     *prev_error = error;
+
+//     float output = Kp * error + Ki * (*integral) + Kd * derivative;
+//     return output > 1.0 ? 0.99 : (output < 0.0 ? 0.0 : output);
+// }
+
+
+// // Function to compute the control signal
+// float compute_pid(float setpoint, float current_value, float *integral, float *prev_error, float *last_control_signal) {
+
+//     float error = setpoint - current_value;
+    
+//     *integral += error;
+
+//     float derivative = error - *prev_error;
+
+//     float control_signal = Kp * error + Ki * (*integral) + Kd * derivative; 
+
+//     *prev_error = error;
+
+//     // Set boundary so that calculated signal will be within PWM range
+//     if (control_signal >= 1.0f) {
+//         control_signal = 0.99f;
+//     } else if (control_signal < 0.0f) {
+//         // Use the last valid control signal if the current one is negative
+//         control_signal = *last_control_signal;
+//     } else {
+//         // Update the last valid control signal
+//         *last_control_signal = control_signal;
+//     }
+
+//     printf("Control Signal = %f, Current Position = %f\n", control_signal, current_value);
+
+//     return control_signal;
+// }
+
+// float compute_pid(float setpoint, float current_value, float *integral, float *prev_error) {
+//     float error = setpoint - current_value;
+    
+//     // Accumulate integral term with windup clamping
+//     // float integral_max = 10.0f;
+//     // float integral_min = -10.0f;
+//     *integral += error;
+//     // if (*integral > integral_max) {
+//     //     *integral = integral_max;
+//     // } else if (*integral < integral_min) {
+//     //     *integral = integral_min;
+//     // }
+
+//     // Compute derivative term
+//     float derivative = error - *prev_error;
+
+//     // Compute the PID control signal
+//     float control_signal = Kp * error + Ki * (*integral) + Kd * derivative; 
+//     *prev_error = error;
+
+//     // Clamp control signal to PWM range
+//     const float control_max = 0.99f;
+//     const float control_min = 0.0f;
+//     if (control_signal > control_max) {
+//         control_signal = control_max;
+//     } else if (control_signal < control_min) {
+//         control_signal = control_min;
+//     }
+//     printf("error %f integral %f\n", error, &integral);
+
+//     // printf("Control Signal = %f, Current Position = %f\n", control_signal, current_value);
+
+//     return control_signal;
+// }
+
+
 
 // both motors forward with PID
 void move_up(){
     // // with wheel encoder implementation
     // float current_speed_motorA = 0.5f; // get from wheel encoder??
     // float current_speed_motorB = 0.5f;
-    printf("left speed %0.2f\n", left_speed);
-    printf("right speed: %.2f\n", right_speed);
+    // printf("left speed %0.2f\n", left_speed);
+    // printf("right speed: %.2f\n", right_speed);
     target_speed_motorA = 35.0f;
     target_speed_motorB = 35.0f;
-    float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, &integral_motorA, &previous_error_motorA);
-    float duty_cycle_B = compute_pid(target_speed_motorB, right_speed, &integral_motorB,&previous_error_motorB);
+    float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, &integral_motorA, &previous_error_motorA, KpLeft, KiLeft, KdLeft);
+    float duty_cycle_B = compute_pid(target_speed_motorB, right_speed, &integral_motorB,&previous_error_motorB, KpRight, KiRight, KdRight);
+    // float duty_cycle_A = pid_calculate(target_speed_motorA, left_speed, &integral_motorA, &previous_error_motorA);
+    // float duty_cycle_B = pid_calculate(target_speed_motorB, right_speed, &integral_motorB,&previous_error_motorB);
+    printf("duty cycle A; %f\n", duty_cycle_A);
+    // printf(" integral motor A:%f\n", integral_motorA);
     // move_motor_A(duty_cycle_A, true); // move A forward
     // move_motor_B(duty_cycle_B, true); // move B forward
     // // end
     move_motor_A(duty_cycle_A, true); // move A forward
     move_motor_B(duty_cycle_B, true); // move B forward
+    is_moving = true;
     printf("moving forward, duty cycle A: %.2f, duty cycle B: %.2f\n", duty_cycle_A, duty_cycle_B);
 
 }
 
 struct repeating_timer pid_timer;
 
-// Callback function for the PID calculation
+// // Callback function for the PID calculation
 bool pid_timer_callback(struct repeating_timer *t) {
     // Update motor speeds based on PID control for each cycle
     move_up();  // Calls move_up() to update the motor speed using the PID controller
 
     return true;  // Returning true will keep the timer running
 }
-
-// Timer callback to print pulse counts periodically
-bool print_pulses_callback(struct repeating_timer *t) {
-    printf("Pulses - Left: %u, Right: %u\n", pulses_left, pulses_right);
-    return true; // Return true to keep the timer running
-}
-
 
 void motor_init(){
     
@@ -288,11 +339,11 @@ void motor_init(){
 
     // turn_right(0.5f,0.48f); // move forward slower
     // turn_left(0.5,0.7);
-    move_forward(0.55f,0.5f);
+    // move_forward(0.55f,0.5f);
 
     // pid stuff
     move_up();
-    // add_repeating_timer_ms(100, pid_timer_callback, NULL, &pid_timer);
+    add_repeating_timer_ms(10, pid_timer_callback, NULL, &pid_timer);
 
     // while (true)
     // {

@@ -13,7 +13,7 @@
 #define MAX_RANGE 400.0f
 #define SOUND_SPEED 0.0343f
 #define TIMEOUT_US 26100
-#define SAFETY_THRESHOLD 20
+#define SAFETY_THRESHOLD 30
 
 absolute_time_t start, end;
 

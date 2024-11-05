@@ -57,32 +57,16 @@ void irTask(__unused void *params) {
     }
 }
 
-// void pulsesTask(__unused void *params){
-//     if (blocked)
-//     {
-//         sleep_ms(1000);
-//         turn_right(0.5f,0.48f);
-//     }
-//     uint32_t pulse_required = pulses_left + 9;
-//     while (1)
-//     {
-//         if (pulses_left >= pulse_required)
-//         {
-//             stop_motors();
-//         }
-//         vTaskDelay(pdMS_TO_TICKS(1));  // Delay ?? ms between readings
-//     }
-// }
-
 void vLaunch( void){
-    // TaskHandle_t ultratask;
-    // xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 5, &ultratask);
+    TaskHandle_t ultratask;
+    xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 5, &ultratask);
 
-    TaskHandle_t infraTask;
-    xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
+    // TaskHandle_t infraTask;
+    // xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
 
-    TaskHandle_t infraBarCodeTask;
-    xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
+    // TaskHandle_t infraBarCodeTask;
+    // xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
+
     // TaskHandle_t pulseTask;
     // xTaskCreate(pulsesTask, "pulseThread", configMINIMAL_STACK_SIZE, NULL, 2, &pulseTask);
 
@@ -103,12 +87,12 @@ int main(){
 
     // Init components
     // swapped wheel encoder and ultrasonic init!
-    // wheel_encoder_init();
-    // ultrasonic_init();
+    wheel_encoder_init();
+    ultrasonic_init();
     
     motor_init();
-    ir_init_barcode();
-    ir_init_linefollow();
+    // ir_init_barcode();
+    // ir_init_linefollow();
 
     const char *rtos_name;
     #if ( portSUPPORT_SMP == 1 )
