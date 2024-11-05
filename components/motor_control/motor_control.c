@@ -97,7 +97,7 @@ void move_forward(float duty_cycle_A, float duty_cycle_B) {
     // // end
     move_motor_A(duty_cycle_A, true); // move A forward
     move_motor_B(duty_cycle_B, true); // move B forward
-    printf("moving forward, duty cycle A: %.2f, duty cycle B: %.2f\n", duty_cycle_A, duty_cycle_B);
+    // printf("moving forward, duty cycle A: %.2f, duty cycle B: %.2f\n", duty_cycle_A, duty_cycle_B);
 
 }
 
@@ -220,7 +220,7 @@ float compute_pid(float setpoint, float current_value, float *integral, float *p
     // UNSURE , NEED TO TEST 
     if (control_signal >= 1.0f)
     {
-        control_signal = 1.0f;
+        control_signal = 0.99f;
     }
     else if (control_signal < 0.0f)
     {
@@ -239,8 +239,8 @@ void move_up(){
     // float current_speed_motorB = 0.5f;
     printf("left speed %0.2f\n", left_speed);
     printf("right speed: %.2f\n", right_speed);
-    target_speed_motorA = 38.0f;
-    target_speed_motorB = 38.0f;
+    target_speed_motorA = 35.0f;
+    target_speed_motorB = 35.0f;
     float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, &integral_motorA, &previous_error_motorA);
     float duty_cycle_B = compute_pid(target_speed_motorB, right_speed, &integral_motorB,&previous_error_motorB);
     // move_motor_A(duty_cycle_A, true); // move A forward
@@ -291,7 +291,7 @@ void motor_init(){
     move_forward(0.55f,0.5f);
 
     // pid stuff
-    // move_up();
+    move_up();
     // add_repeating_timer_ms(100, pid_timer_callback, NULL, &pid_timer);
 
     // while (true)

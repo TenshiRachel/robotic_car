@@ -21,7 +21,7 @@ static float obstacle_distance = 0.0f;
 
 // john
 volatile bool blocked = false;  // Flag to enable/disable callback
-
+volatile bool turning = false; // track turning
 // Kalman filter variables
 static float estimate = 0.0f;
 static float uncertainty = 1.0f;
@@ -47,6 +47,8 @@ volatile uint32_t pulses_right = 0;
 // john
 volatile float left_speed = 0;
 volatile float right_speed = 0;
+volatile uint32_t pulse_required = 0; // Global to store the target pulse count
+
 
 static float pulse_width_left, pulse_width_right;
 static absolute_time_t last_time_left, last_time_right;
@@ -115,11 +117,12 @@ void shared_callback(uint gpio, uint32_t events){
             // }
             if (blocked)
             {
-                uint32_t pulses_required = pulses_left + 9;
-                if (pulses_left >= pulses_required)
-                {
-                    move_forward(0.55f, 0.5f);
-                }
+                // uint32_t pulses_required = pulses_left + 9;
+                // if (pulses_left >= pulses_required)
+                // {
+                //     stop_motors();
+                //     // move_forward(0.55f, 0.5f);
+                // }
             }
         }
         if (gpio == RIGHT_ENCODER_PIN)
@@ -141,7 +144,7 @@ void shared_callback(uint gpio, uint32_t events){
         }
         set_speed_distance();
 
-        printf("Speed: %.2f cm/s\nDistance travelled: %.2fcm\n", speed, total_distance);
+        // printf("Speed: %.2f cm/s\nDistance travelled: %.2fcm\n", speed, total_distance);
     } 
 
     if ((events & GPIO_IRQ_EDGE_RISE) && gpio == ECHO_PIN){
@@ -157,15 +160,24 @@ void shared_callback(uint gpio, uint32_t events){
             uint64_t pulse = absolute_time_diff_us(start, end);
             float raw_distance = pulse * SOUND_SPEED / 2;
             obstacle_distance = kalman_update(raw_distance);
-            printf("Distance to obstacle: %.2f\n", obstacle_distance);
+            // printf("Distance to obstacle: %.2f\n", obstacle_distance);
             if (obstacle_distance <= SAFETY_THRESHOLD && !blocked){
-                stop_motors();
+                // stop_motors();
                 // sleep_ms(1000);
-                // turn_right(0.6f,0.4f);
+                turn_right(0.6f,0.4f);
                 blocked = true;
+                // uint32_t pulses_required = pulses_left + 9;
+                pulse_required = pulses_left + 20;
+                turning = true;
+            }
+                // Check if we are turning and whether to stop
+            if (turning && pulses_left >= pulse_required) {
+                stop_motors();
+                turning = false; // Reset the turning state
             }
 
-            else if (obstacle_distance > SAFETY_THRESHOLD && blocked){
+
+            else if (obstacle_distance > SAFETY_THRESHOLD && blocked && !turning){
                 move_forward(0.6f,0.6f);
                 blocked = false;
             }
