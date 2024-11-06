@@ -38,7 +38,7 @@
 #define BUF_SIZE 96
 
 #define MESSAGE "Message from Pico!"
-#define TARGET_IP "192.168.4.2" // Replace with the specific IP address of your computer (can be found using)
+#define TARGET_IP "192.168.4.1" // Replace with the specific IP address of your computer (can be found using)
 #define TARGET_PORT 8000          // Replace with the desired target port
 
 static struct sockaddr_in target_addr;
@@ -77,11 +77,6 @@ void send_data_task(__unused void *params)
 
     while (1)
     {
-        // xReceivedBytes = xMessageBufferReceive(
-        //     xSendMessageBuffer,     /* The message buffer to receive from. */
-        //     (void *)&sReceivedData, /* Location to store received data. */
-        //     sizeof(sReceivedData),  /* Maximum number of bytes to receive. */
-        //     portMAX_DELAY);         /* Wait forever until something is received */
         ReceiveFromMessageBuffer(sReceivedData, sizeof(sReceivedData), portMAX_DELAY);
 
         // Send the message to the target address
@@ -128,14 +123,14 @@ static void run_server()
     // Step 2: Bind the socket to the specified port and address
     struct sockaddr_in listen_addr = {
         .sin_family = AF_INET,
-        .sin_port = htons(1234),      // Port to listen on (1234)
+        .sin_port = htons(TARGET_PORT),      // Port to listen on
         .sin_addr.s_addr = INADDR_ANY // Listen on any available IP address, on the pico the default is 192.168.4.1
     };
 
     if (bind(conn_sock, (struct sockaddr *)&listen_addr, sizeof(listen_addr)) < 0)
     {
         printf("Unable to bind socket: error %d\n", errno);
-        //close(conn_sock);
+        close(conn_sock);
         return;
     }
 
@@ -211,7 +206,7 @@ static void run_server()
     }
 
     // Step 8: Close the socket when done (though this is never reached here)
-    //close(conn_sock);
+    close(conn_sock);
 }
 
 void wifi_and_server_task(__unused void *params)
@@ -222,24 +217,25 @@ void wifi_and_server_task(__unused void *params)
         return;
     }
 
-    // cyw43_arch_enable_sta_mode();
-    // printf("Connecting to Wi-Fi...\n");
-    // if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 30000))
-    // {
-    //     printf("failed to connect.\n");
-    //     exit(1);
-    // }
-    // else
-    // {
-    //     printf("Connected.\n");
-    // }
-    const char *ap_name = "picow_p5a";
-#if 1
-    const char *password = "password";
-#else
-    const char *password = NULL;
-#endif
-    cyw43_arch_enable_ap_mode(ap_name, password, CYW43_AUTH_WPA2_AES_PSK); // use the pico as a wifi access point
+    cyw43_arch_enable_sta_mode();
+    printf("Connecting to Wi-Fi...\n");
+    if (cyw43_arch_wifi_connect_timeout_ms("picow_p5a", "password", CYW43_AUTH_WPA2_AES_PSK, 30000))
+    {
+        printf("failed to connect.\n");
+        exit(1);
+    }
+    else
+    {
+        printf("Connected.\n");
+    }
+
+//     const char *ap_name = "picow_p5a";
+// #if 1
+//     const char *password = "password";
+// #else
+//     const char *password = NULL;
+// #endif
+    //cyw43_arch_enable_ap_mode(ap_name, password, CYW43_AUTH_WPA2_AES_PSK); // use the pico as a wifi access point
 
     // TaskHandle_t broadcast_task;
     // xTaskCreate(broadcastTask, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, &broadcast_task);
