@@ -13,7 +13,7 @@
 #define MAX_RANGE 400.0f
 #define SOUND_SPEED 0.0343f
 #define TIMEOUT_US 26100
-#define SAFETY_THRESHOLD 20
+#define SAFETY_THRESHOLD 18
 
 absolute_time_t start, end;
 
@@ -27,8 +27,6 @@ static float estimate = 0.0f;
 static float uncertainty = 1.0f;
 const float Q = 0.01f;
 const float R = 0.1f;
-
-
 
 
 /* defines/static variables from wheel encoder are below */
@@ -54,7 +52,7 @@ static float pulse_width_left, pulse_width_right;
 static absolute_time_t last_time_left, last_time_right;
 static volatile float speed;
 static volatile float total_distance = 0.0f;
-
+float end_distance = 0.0f; // Station 1: to indicate end of 90cm mark
 
 
 void sendPulse(){
@@ -80,7 +78,10 @@ float kalman_update(float distance){
 void set_speed_distance()
 {
     // Get average
-    total_distance += ((pulses_left + pulses_right) / 2) * NOTCHES_CM;
+    float dist_left = pulses_left * NOTCHES_CM;
+    float dist_right = pulses_right * NOTCHES_CM;
+    total_distance = ((dist_left + dist_right) / 2);
+    // printf("distance: %f, pulse left: %d, pulse right: %d \n", total_distance, pulses_left, pulses_right);
 
     left_speed = (pulse_width_left > 0) ? NOTCHES_CM / pulse_width_left : 0;
     right_speed = (pulse_width_right > 0) ? NOTCHES_CM / pulse_width_right : 0;
@@ -111,20 +112,6 @@ void shared_callback(uint gpio, uint32_t events){
             // printf("Pulses Left: %u\n", pulses_left);
 
             last_time_left = current_time;
-            // uint32_t pulse_required = 9;
-            // if (pulses_left >= pulse_required)
-            // {
-            //     stop_motors();
-            // }
-            if (blocked)
-            {
-                // uint32_t pulses_required = pulses_left + 9;
-                // if (pulses_left >= pulses_required)
-                // {
-                //     stop_motors();
-                //     // move_forward(0.55f, 0.5f);
-                // }
-            }
         }
         if (gpio == RIGHT_ENCODER_PIN)
         {
@@ -162,26 +149,35 @@ void shared_callback(uint gpio, uint32_t events){
             float raw_distance = pulse * SOUND_SPEED / 2;
             obstacle_distance = raw_distance;
             // obstacle_distance = kalman_update(raw_distance);
-            printf("Distance to obstacle: %.2f\n", obstacle_distance);
+            // printf("Distance to obstacle: %.2f\n", obstacle_distance);
             if (obstacle_distance <= SAFETY_THRESHOLD && !blocked){
                 stop_motors();
                 // sleep_ms(1000);
-                // turn_right(0.6f,0.4f);
+                turn_right(0.8f,0.65f);
                 blocked = true;
                 // uint32_t pulses_required = pulses_left + 9;
-                pulse_required = pulses_left + 17;
+                pulse_required = pulses_left + 9;
                 turning = true;
             }
                 // Check if we are turning and whether to stop
             if (turning && pulses_left >= pulse_required) {
                 stop_motors();
                 turning = false; // Reset the turning state
+                end_distance = total_distance + 90;
+                printf("stop at distance %f\n", total_distance);
+
+                printf("ending at distance +90cm %f\n", end_distance);
+
             }
-
-
-            else if (obstacle_distance > SAFETY_THRESHOLD && blocked && !turning){
-                move_forward(0.6f,0.6f);
-                blocked = false;
+            else if (obstacle_distance > SAFETY_THRESHOLD && blocked && !turning) {
+                if (total_distance < end_distance) {
+                    move_up();
+                    printf("current : %f , end : %f\n", total_distance, end_distance);
+                } else { // total distance > end_distance , then stop motor
+                    stop_motors();
+                    blocked = false;
+                    printf("Reached end distance, stopping motors\n");
+                }
             }
         }
     }
