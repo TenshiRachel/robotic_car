@@ -197,7 +197,7 @@ bool process_barcode(struct repeating_timer *t)
                 {
                     read_flag = true; // set flag to read the character
                     gap_flag = true; // set flag to skip the gap pulse
-                    //printf("Found start * successfully!\n");
+                    printf("Found start * successfully!\n");
                     char msg[] = "Found start * successfully!\n";
                     SendToMessageBuffer(msg, sizeof(msg), 0);
                     // reset array to no timings
@@ -213,7 +213,7 @@ bool process_barcode(struct repeating_timer *t)
                 if (gap_flag)
                 {
                     gap_flag = false;
-                    //printf("Skip gap pulse!\n");
+                    printf("Skip gap pulse!\n");
                     char msg[] = "Skip gap pulse!\n";
                     SendToMessageBuffer(msg, sizeof(msg), 0);
                     return true;
@@ -231,7 +231,7 @@ bool process_barcode(struct repeating_timer *t)
                         end_flag = true; // signal to go detect for end character
                         gap_flag = true; // set flag to skip the gap pulse
                         character_read = value.character;
-                        //printf("Read a character %c! Now listening for end *.\n", character_read);
+                        printf("Read a character %c! Now listening for end *.\n", character_read);
 
                         snprintf(message, sizeof(message), "Read a character %c! Now listening for end *.\n", character_read);
                         SendToMessageBuffer(message, sizeof(message), 0);
@@ -240,7 +240,7 @@ bool process_barcode(struct repeating_timer *t)
                     {
                         char msg[] = "Invalid character. Resetting all\n";
                         SendToMessageBuffer(msg, sizeof(msg), 0);
-                        //printf("Invalid character. Resetting all\n");
+                        printf("Invalid character. Resetting all\n");
                         read_flag = end_flag = gap_flag = reverse_flag = false;
                     }
                     num_existing_timings = 0;
@@ -254,7 +254,7 @@ bool process_barcode(struct repeating_timer *t)
                     {
                         snprintf(message, sizeof(message), "Successfully read character %c! Resetting to listen for start *.\n", character_read);
                         SendToMessageBuffer(message, sizeof(message), 0);
-                        //printf("Successfully read character %c! Resetting to listen for start *.\n", character_read);
+                        printf("Successfully read character %c! Resetting to listen for start *.\n", character_read);
                     }
                     else
                 {
