@@ -26,15 +26,6 @@ typedef struct
 } characterSequence;
 
 
-// void __not_in_flash_func(adc_capture)(uint16_t *buf, size_t count) {
-//     adc_fifo_setup(true, false, 0, false, false);
-//     adc_run(true);
-//     for (int i = 0; i < count; i = i + 1)
-//         buf[i] = adc_fifo_get_blocking();
-//     adc_run(false);
-//     adc_fifo_drain();
-// }
-
 characterSequence all_characters[] = {
     {'0', "000110100"},
     {'1', "100100001"},
@@ -91,8 +82,6 @@ void ir_init_barcode(){
     gpio_set_function(GPIO_PIN, GPIO_FUNC_SIO);
     adc_select_input(ADC_CHANNEL);
 
-    // gpio_init(18);
-    // gpio_set_dir(18, GPIO_OUT);
 }
 int state2 = 0;
 bool process_barcode(struct repeating_timer *t)
@@ -113,17 +102,6 @@ bool process_barcode(struct repeating_timer *t)
     static int8_t current_colour = 3;
     char message[64] = {0};
 
-    // if(state2 == 0)
-    // {
-    //     state2 = 1;
-    //     gpio_put(18,1);
-    // }
-    // else
-    // {
-    //     state2 = 0;
-    //     gpio_put(18,0);
-    // }
-
     static bool first_call = true;
     if (first_call) {
         startTime = get_absolute_time();
@@ -131,7 +109,6 @@ bool process_barcode(struct repeating_timer *t)
     }
     uint32_t result = adc_read();
     // printf("ADC: %u\n", result); // Use %u for uint32_t
-    // const float converted_result = result * conversion_factor; // TODO: Optimise without multiplying
     current_colour = get_colour(result);
     // current_colour = gpio_get(27);
     if (current_colour != colour) {
@@ -181,17 +158,6 @@ bool process_barcode(struct repeating_timer *t)
             {
                 value = check_asterisk(classified_string, read_flag, end_flag, &reverse_flag);
 
-                // if(state2 == 0)
-                // {
-                //     state2 = 1;
-                //     gpio_put(18,1);
-                // }
-                // else
-                // {
-                //     state2 = 0;
-                //     gpio_put(18,0);
-                // }
-
                 // if successful, move on to read the actual character
                 if (value.success)
                 {
@@ -213,7 +179,7 @@ bool process_barcode(struct repeating_timer *t)
                 if (gap_flag)
                 {
                     gap_flag = false;
-                    printf("Skip gap pulse!\n");
+                    // printf("Skip gap pulse!\n");
                     return true;
                 }
                 
@@ -377,65 +343,6 @@ characterValue check_asterisk(char *classified_string, bool read_flag, bool end_
 
 
     return result;
-
-    // // If it's the end, reverse is already decided
-    // if (end_flag && *reverse_flag)
-    // {
-    //     for (int i = 0; i < 9; i++)
-    //     {
-    //         if (asterisk[i] != classified_string[9 - 1 - i])
-    //         {
-    //             result.success = false;
-    //             break;
-    //         }
-    //     }
-    //     return result;
-    // }
-
-    // // If it's the end and there is no reverse decided at the start
-    // if (end_flag && !*reverse_flag)
-    // {
-    //     for (int i = 0; i < 9; i++)
-    //     {
-    //         if (asterisk[i] != classified_string[i])
-    //         {
-    //             result.success = false;
-    //             break;
-    //         }
-    //     }
-    //     return result;
-    // }
-
-    // // If it is not the end (reverse has not been decided), try both
-    // // Try normal way first
-    // for (int i = 0; i < 9; i++)
-    // {
-    //     if (asterisk[i] != classified_string[i])
-    //     {
-    //         result.success = false;
-    //         break;
-    //     }
-    // }
-    // // if successful, return result
-    // if (result.success)
-    // {
-    //     return result;
-    // }
-
-    // // Otherwise try reverse version
-    // result.success = true;
-    // for (int i = 0; i < 9; i++)
-    // {
-    //     if (asterisk[i] != classified_string[9 - 1 - i])
-    //     {
-    //         // if not successful at any point, there is no match
-    //         result.success = false;
-    //         return result;
-    //     }
-    // }
-    // // reached here, which means there is a successful match, hence set reverse flag
-    // *reverse_flag = true;
-    return result;
 }
 
 int get_colour(uint32_t result)
@@ -463,60 +370,3 @@ int get_colour(uint32_t result)
         return WHITE;
     }
 }
-
-// void clear_timings()
-// {
-//     for (int i = 0; i < 9; i++)
-//     {
-//         timings[i] = 0;
-//         num_existing_timings = 0;
-//         classified_string[i] = 0;
-//     }
-// }
-
-// #include <stdio.h>
-// #include "pico/stdlib.h"
-// #include "hardware/gpio.h"
-// #include "hardware/adc.h"
-// #include "hardware/irq.h"
-// #include "hardware/timer.h"
-
-// volatile int colour = 2;
-// volatile uint32_t result = 0;
-
-// // repeating timer
-// bool adc_timer_callback(struct repeating_timer *t) {
-//     result = adc_read();
-    
-//     const float conversion_factor = 3.3f / (1 << 12);
-//     const float converted_result = result * conversion_factor;
-
-//     if (converted_result > 0.6) {
-//         if (colour != 1) {
-//             printf("Black surface detected\n");
-//             colour = 1;
-//         }
-//     } else {
-//         if (colour != 0) {
-//             printf("White surface detected\n");
-//             colour = 0;
-//         }
-//     }
-//     return true;  // returning true = the timer will repeat
-// }
-
-// int main(void) {
-//     stdio_init_all();
-//     adc_init();
-//     adc_gpio_init(26);
-//     adc_select_input(0);
-
-//     struct repeating_timer timer;
-
-//     add_repeating_timer_us(-100000, adc_timer_callback, NULL, &timer);
-
-//     // Main loop does nothing, as the work is handled by the interrupt-like timer
-//     while (1) {
-//         tight_loop_contents();  // Wait for the timer to trigger
-//     }
-// }
