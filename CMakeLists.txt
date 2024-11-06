@@ -44,6 +44,7 @@ hardware_adc
 hardware_gpio 
 pico_cyw43_arch_lwip_sys_freertos
 FreeRTOS-Kernel-Heap4
+hardware_i2c
 )
 
 pico_enable_stdio_usb(robotic_car 1)
@@ -59,8 +60,8 @@ add_executable(robotic_car_wifi
         )
 
 target_compile_definitions(robotic_car_wifi PRIVATE
-        WIFI_SSID=\"${WIFI_SSID}\"
-        WIFI_PASSWORD=\"${WIFI_PASSWORD}\"
+        WIFI_SSID=\"picow_p5a\"
+        WIFI_PASSWORD=\"password\"
         NO_SYS=0            # don't want NO_SYS (generally this would be in your lwipopts.h)
         LWIP_SOCKET=1       # we need the socket API (generally this would be in your lwipopts.h)
         PING_USE_SOCKETS=1
@@ -75,6 +76,7 @@ target_link_libraries(robotic_car_wifi
         pico_cyw43_arch_lwip_sys_freertos
         pico_stdlib
         FreeRTOS-Kernel-Heap4 # FreeRTOS kernel and dynamic heap
+        hardware_i2c
         )
 
 pico_enable_stdio_usb(robotic_car_wifi 1)
@@ -88,13 +90,14 @@ example_auto_set_url(robotic_car_wifi)
 # remote wifi cmake stuff
 add_executable(remote_wifi
         components/wifi/remote/remote_wifi.c
+        components/remote/remote.c
         )
 
 target_compile_definitions(remote_wifi PRIVATE
-        # STATIC_IP=1    # uncomment this to disable dhcp client and use static ip addr. must be used in conjunction with PICO_ROLE
-        # PICO_ROLE=1    # uncomment this to set the appropriate static ip. refer to lwipopts_examples_common.h for more info
-        WIFI_SSID=\"${WIFI_SSID}\"
-        WIFI_PASSWORD=\"${WIFI_PASSWORD}\"
+        STATIC_IP=1    # uncomment this to disable dhcp client and use static ip addr. must be used in conjunction with PICO_ROLE
+        PICO_ROLE=1    # uncomment this to set the appropriate static ip. refer to lwipopts_examples_common.h for more info
+        WIFI_SSID=\"picow_p5a\"
+        WIFI_PASSWORD=\"password\"
         NO_SYS=0            # don't want NO_SYS (generally this would be in your lwipopts.h)
         LWIP_SOCKET=1       # we need the socket API (generally this would be in your lwipopts.h)
         )
@@ -108,10 +111,11 @@ target_link_libraries(remote_wifi
         pico_cyw43_arch_lwip_sys_freertos
         pico_stdlib
         FreeRTOS-Kernel-Heap4 # FreeRTOS kernel and dynamic heap
+        hardware_i2c
         )
 
 pico_enable_stdio_usb(remote_wifi 1)
-pico_enable_stdio_uart(remote_wifi 1)
+pico_enable_stdio_uart(remote_wifi 0)
 
 pico_add_extra_outputs(remote_wifi)
 
@@ -124,3 +128,18 @@ else()
     include(FreeRTOS_Kernel_import.cmake)
 
 endif()
+
+# remote controller cmake stuff
+add_executable(remote
+        components/remote/remote.c
+        )
+
+target_link_libraries(remote pico_stdlib hardware_i2c)
+
+# Enable USB output, disable UART output
+pico_enable_stdio_usb(remote 1)
+pico_enable_stdio_uart(remote 0)
+
+pico_add_extra_outputs(remote)
+
+example_auto_set_url(remote)

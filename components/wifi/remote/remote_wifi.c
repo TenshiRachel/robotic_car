@@ -1,173 +1,142 @@
-// more info can be found in lwipopts_examples_common.h and the cmake
+#include <stdio.h>
 #include "pico/cyw43_arch.h"
 #include "pico/stdlib.h"
-
-#include "lwip/ip4_addr.h"
-#include "lwip/netif.h"
-#include <lwip/sockets.h>
-
+#include "hardware/i2c.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "message_buffer.h"
+#include "lwip/sockets.h"
 
-#ifndef RUN_FREERTOS_ON_CORE
-#define RUN_FREERTOS_ON_CORE 0
-#endif
+#include "components/remote/remote.h"
 
-#define TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 1UL)
-#define mbaTASK_MESSAGE_BUFFER_SIZE (80) // message buffer size, increase as needed based on individual message size
+// Configuration
+#define TARGET_IP "192.168.4.1"
+#define TARGET_PORT 8000
+#define ACCEL_ADDRESS 0x19
+#define MAG_ADDRESS 0x1E
+#define BUF_SIZE 128
+#define MESSAGE_BUFFER_SIZE 128  // Size of the message buffer
 
-#define MESSAGE "Message from Pico!"
-
-
-#define TARGET_IP "192.168.137.1" // Replace with the specific IP address of your computer (can be found using)
-#define TARGET_PORT 8000          // Replace with the desired target port
-#define BUF_SIZE 96
-
-static struct sockaddr_in target_addr;
 static int sock;
-static MessageBufferHandle_t xSendMessageBuffer;
+static struct sockaddr_in target_addr;
+static MessageBufferHandle_t xMessageBuffer;
 
-void send_data_task(__unused void *params)
-{
-    static char sReceivedData[40] = {0};
-    size_t xReceivedBytes;
+#define STATIONARY_Z 9
 
-    while (1)
-    {
-        xReceivedBytes = xMessageBufferReceive(
-            xSendMessageBuffer,    /* The message buffer to receive from. */
-            (void *)&sReceivedData, /* Location to store received data. */
-            sizeof(sReceivedData),  /* Maximum number of bytes to receive. */
-            portMAX_DELAY);         /* Wait forever until something is received */
-
-        // Send the message to the target address
-        int result = sendto(sock, sReceivedData, strlen(sReceivedData), 0, (struct sockaddr *)&target_addr, sizeof(target_addr));
-        if (result < 0)
-        {
-            printf("Failed to send message: error %d\n", errno);
-        }
-        else
-        {
-            printf("Message sent successfully\n");
-        }
+// WiFi Connection Task with LED Feedback
+void wifi_connect_task(__unused void *params) {
+    if (cyw43_arch_init()) {
+        printf("WiFi init failed\n");
+        vTaskDelete(NULL);
     }
-
-    //Close the socket
-    close(sock);
-}
-
-void blink_led_task(__unused void *params)
-{
-    while(1) {
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-        sleep_ms(50);
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-        sleep_ms(450);
-    }
-}
-
-void create_data()
-{
-    // simulate main loop where you get data and pass it to the wifi task to be sent out
-    while(true) {
-        // poll wifi state, if link goes down exit the program (todo error handling)
-        if (cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_UP)
-        {
-            // create some random rubbish to send
-            char randNum = 26 * (rand() / (RAND_MAX + 1.0)) + 97;
-            static char a[] = "Hello ";
-            char b[11] = {0};
-            char c[4] = {randNum, '\r', '\n', '\0'};
-
-            strcat(b, a);
-            strcat(b, c);
-
-            printf("Message sent: %s", b);
-            xMessageBufferSend(/* The message buffer to write to. */
-                            xSendMessageBuffer,
-                            /* The source of the data to send. */
-                            (void *)&b,
-                            /* The length of the data to send. */
-                            sizeof(b),
-                            /* The block time; 0 = no block */
-                            0);
-            sleep_ms(1500);
-        } else {
-            printf("Wifi link failure\n");
-            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-            exit(1);
-        }
-    }
-}
-
-int create_socket() {
-    // Create a UDP socket
-    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (sock < 0)
-    {
-        printf("Failed to create socket: error %d\n", errno);
-        return 0;
-    }
-
-    // Set up the destination address
-    memset(&target_addr, 0, sizeof(target_addr));
-    target_addr.sin_family = AF_INET;
-    target_addr.sin_port = htons(8000);
-    target_addr.sin_addr.s_addr = inet_addr(TARGET_IP);
-
-    return 1;
-}
-
-void main_task(__unused void *params)
-{
-    if (cyw43_arch_init())
-    {
-        printf("failed to initialise\n");
-        return;
-    }
-    sleep_ms(2000);
-
-    // blink led while trying to connect the wifi
-    TaskHandle_t blink_task;
-    xTaskCreate(blink_led_task, "BlinkThread", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, &blink_task);
 
     cyw43_arch_enable_sta_mode();
-    printf("Connecting to Wi-Fi...\n");
-    
-    // make sure to set wifi ssid and password in the cmake environment
-    // must hover mouse over these to make sure the values are correct!
-    if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 30000))
-    {
-        printf("failed to connect.\n");
-        exit(1);
-    }
-    else
-    {
-        // stop blinking led on connection success. keep it turned on
-        vTaskDelete(blink_task);
+
+    // Blink LED to indicate connection attempt
+    for (int i = 0; i < 20; i++) {  // Blink for 20 cycles
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-        printf("Connected.\n");
-
-        // successfully created a udp socket? start creating random data to send!
-        if(create_socket() == 1) {
-            create_data();
-        } else {
-            exit(1);
-        }
+        vTaskDelay(pdMS_TO_TICKS(50));
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
+        vTaskDelay(pdMS_TO_TICKS(450));
     }
 
-    cyw43_arch_deinit();
+    if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 30000)) {
+        printf("WiFi connection failed\n");
+        cyw43_arch_deinit();
+        vTaskDelete(NULL);
+    }
+
+    // Turn LED solid on connection success
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+    printf("Connected to WiFi\n");
+
+    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sock < 0) {
+        printf("Failed to create socket\n");
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
+        cyw43_arch_deinit();
+        vTaskDelete(NULL);
+    }
+
+    memset(&target_addr, 0, sizeof(target_addr));
+    target_addr.sin_family = AF_INET;
+    target_addr.sin_port = htons(TARGET_PORT);
+    target_addr.sin_addr.s_addr = inet_addr(TARGET_IP);
+
+    // Keep the task alive with a delay to maintain WiFi and socket
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(100));  // Keeps the task active without consuming CPU time
+    }
 }
 
-void vLaunch(void)
-{
-    TaskHandle_t task;
-    xTaskCreate(main_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, &task);
-    TaskHandle_t send_task;
-    xTaskCreate(send_data_task, "SendThread", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, &send_task);
-    
-    xSendMessageBuffer = xMessageBufferCreate(mbaTASK_MESSAGE_BUFFER_SIZE);
+// Read Accelerometer and Magnetometer Data Task
+void read_data_task(__unused void *params) {
+    int16_t accel_x, accel_y, accel_z;
+    int16_t mag_x, mag_y, mag_z;
+    bool initialized = false;
+
+    while (1) {
+        read_accelerometer(&accel_x, &accel_y, &accel_z);
+        read_magnetometer(&mag_x, &mag_y, &mag_z);
+        update_mag_buffer((float)mag_x, (float)mag_y, (float)mag_z);
+        float avg_mag_x, avg_mag_y, avg_mag_z;
+        get_moving_average_mag(&avg_mag_x, &avg_mag_y, &avg_mag_z);
+
+        apply_hybrid_filter(accel_x, accel_y, accel_z);
+
+        filtered_mag[0] = complementary_filter(avg_mag_x, filtered_mag[0]);
+        filtered_mag[1] = complementary_filter(avg_mag_y, filtered_mag[1]);
+        filtered_mag[2] = complementary_filter(avg_mag_z, filtered_mag[2]);
+
+        float current_heading = calculate_heading(filtered_mag[0], filtered_mag[1]);
+        filtered_heading = complementary_filter(current_heading, filtered_heading);
+
+        generate_command(filtered_accel[0], filtered_accel[1]);
+
+        if (command_ready) {
+            // Retrieve the movement command from remote.c
+            const char *command = get_command_buffer();
+
+            if (xMessageBufferSend(xMessageBuffer, command, strlen(command), pdMS_TO_TICKS(100)) != strlen(command)) {
+                printf("Failed to send command over WiFi\n");
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+
+// Send Movement Commands to Car Pico Task
+void send_data_task(__unused void *params) {
+    char sensor_data[BUF_SIZE];
+    size_t received_bytes;
+
+    if (sock < 0) {
+        vTaskDelete(NULL);  // Exit if socket is invalid
+    }
+
+    while (1) {
+        received_bytes = xMessageBufferReceive(xMessageBuffer, sensor_data, BUF_SIZE, portMAX_DELAY);
+        if (received_bytes > 0) {
+            if (sock < 0) {
+                printf("Debug: Invalid socket before sendto, sock = %d\n", sock);
+                continue;  // Skip sending if socket is invalid
+            }
+
+            int result = sendto(sock, sensor_data, received_bytes, 0, (struct sockaddr *)&target_addr, sizeof(target_addr));
+            if (result < 0) {
+                printf("Failed to send message: error %d, sock = %d\n", errno, sock);
+            } else {
+                printf("Accelerometer and magnetometer data sent successfully\n");
+            }
+        }
+    }
+}
+
+void vLaunch() {
+    xTaskCreate(wifi_connect_task, "WiFiTask", 2048, NULL, 1, NULL);
+    xTaskCreate(read_data_task, "DataAcquisition", 2048, NULL, 1, NULL);
+    xTaskCreate(send_data_task, "DataTransmission", 2048, NULL, 1, NULL);
 
 #if NO_SYS && configUSE_CORE_AFFINITY && configNUMBER_OF_CORES > 1
         // we must bind the main task to one core (well at least while the init is called)
@@ -176,34 +145,24 @@ void vLaunch(void)
         vTaskCoreAffinitySet(task, 1);
 #endif
 
-    /* Start the tasks and timer running. */
     vTaskStartScheduler();
 }
 
-int main(void)
-{
+int main(void) {
     stdio_init_all();
+    init_i2c();
+    init_accelerometer();
+    init_magnetometer();
 
-    /* Configure the hardware ready to run the demo. */
-    const char *rtos_name;
-#if (configNUMBER_OF_CORES > 1)
-    rtos_name = "FreeRTOS SMP";
-#else
-    rtos_name = "FreeRTOS";
-#endif
+    xMessageBuffer = xMessageBufferCreate(MESSAGE_BUFFER_SIZE);
+    if (xMessageBuffer == NULL) {
+        printf("Failed to create message buffer\n");
+        return -1;
+    }
 
-#if (configNUMBER_OF_CORES == 2)
-    printf("Starting %s on both cores:\n", rtos_name);
     vLaunch();
-#elif (RUN_FREERTOS_ON_CORE == 1)
-    printf("Starting %s on core 1:\n", rtos_name);
-    multicore_launch_core1(vLaunch);
-    while (true)
-        ;
-#else
-    sleep_ms(3000);
-    printf("Starting %s on core 0:\n", rtos_name);
-    vLaunch();
-#endif
-    return 0;
+
+    while (1) {
+        tight_loop_contents();
+    }
 }
