@@ -57,6 +57,19 @@ void irTask(__unused void *params) {
     }
 }
 
+// pid task
+void pidTask(__unused void *params) {
+    const TickType_t xFrequency = pdMS_TO_TICKS(10);  // 10 ms interval for PID updates
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    while (1) {
+        pid_timer_callback();  // Call your PID update function
+
+        // Delay until the next cycle
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+    }
+}
+
 void vLaunch( void){
     TaskHandle_t ultratask;
     xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 5, &ultratask);
@@ -69,6 +82,8 @@ void vLaunch( void){
 
     // TaskHandle_t pulseTask;
     // xTaskCreate(pulsesTask, "pulseThread", configMINIMAL_STACK_SIZE, NULL, 2, &pulseTask);
+    TaskHandle_t pidUpdateTask;
+    xTaskCreate(pidTask, "pidThread", configMINIMAL_STACK_SIZE,NULL,3, &pidUpdateTask);
 
 #if NO_SYS && configUSE_CORE_AFFINITY && configNUM_CORES > 1
     // we must bind the main task to one core (well at least while the init is called)

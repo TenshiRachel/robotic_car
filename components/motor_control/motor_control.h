@@ -7,7 +7,7 @@ void move_backward(float duty_cycle_A, float duty_cycle_B);
 void stop_motors();
 void turn_right(float duty_cycle_A, float duty_cycle_B);
 void turn_left(float duty_cycle_A, float duty_cycle_B);
-bool pid_timer_callback(struct repeating_timer *t);
+void pid_timer_callback();
 extern volatile bool is_moving;
 
 #endif

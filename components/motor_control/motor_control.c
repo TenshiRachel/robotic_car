@@ -194,7 +194,7 @@ float compute_pid(float setpoint, float current_value, float *integral, float *p
 
 
 
-    printf(" Control Signal = %f, Current Position = %f, Integral = %f , Error = %f\n", control_signal, current_value, *integral, error); // error: Control Signal = %f because it is float not decimal
+    // printf(" Control Signal = %f, Current Position = %f, Integral = %f , Error = %f\n", control_signal, current_value, *integral, error); // error: Control Signal = %f because it is float not decimal
 
     return control_signal;
 }
@@ -298,7 +298,7 @@ void move_up(){
     float duty_cycle_B = compute_pid(target_speed_motorB, right_speed, &integral_motorB,&previous_error_motorB, KpRight, KiRight, KdRight);
     // float duty_cycle_A = pid_calculate(target_speed_motorA, left_speed, &integral_motorA, &previous_error_motorA);
     // float duty_cycle_B = pid_calculate(target_speed_motorB, right_speed, &integral_motorB,&previous_error_motorB);
-    printf("duty cycle A; %f\n", duty_cycle_A);
+    // printf("duty cycle A; %f\n", duty_cycle_A);
     // printf(" integral motor A:%f\n", integral_motorA);
     // move_motor_A(duty_cycle_A, true); // move A forward
     // move_motor_B(duty_cycle_B, true); // move B forward
@@ -312,12 +312,29 @@ void move_up(){
 
 struct repeating_timer pid_timer;
 
-// // Callback function for the PID calculation
-bool pid_timer_callback(struct repeating_timer *t) {
-    // Update motor speeds based on PID control for each cycle
-    move_up();  // Calls move_up() to update the motor speed using the PID controller
+// // // Callback function for the PID calculation
+// bool pid_timer_callback(struct repeating_timer *t) {
+//     // Update motor speeds based on PID control for each cycle
+//     move_up();  // Calls move_up() to update the motor speed using the PID controller
 
-    return true;  // Returning true will keep the timer running
+//     return true;  // Returning true will keep the timer running
+// }
+void pid_timer_callback() {
+    if (is_moving) {
+        // Compute PID output for Motor A
+        float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, 
+                                         &integral_motorA, &previous_error_motorA, 
+                                         KpLeft, KiLeft, KdLeft);
+        
+        // Compute PID output for Motor B
+        float duty_cycle_B = compute_pid(target_speed_motorB, right_speed, 
+                                         &integral_motorB, &previous_error_motorB, 
+                                         KpRight, KiRight, KdRight);
+
+        // Update motor speeds with the computed duty cycles
+        move_motor_A(duty_cycle_A, true);
+        move_motor_B(duty_cycle_B, true);
+    }
 }
 
 void motor_init(){
@@ -343,7 +360,7 @@ void motor_init(){
 
     // pid stuff
     move_up();
-    add_repeating_timer_ms(10, pid_timer_callback, NULL, &pid_timer);
+    // add_repeating_timer_ms(10, pid_timer_callback, NULL, &pid_timer);
 
     // while (true)
     // {

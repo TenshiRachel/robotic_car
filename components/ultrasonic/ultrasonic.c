@@ -13,7 +13,7 @@
 #define MAX_RANGE 400.0f
 #define SOUND_SPEED 0.0343f
 #define TIMEOUT_US 26100
-#define SAFETY_THRESHOLD 30
+#define SAFETY_THRESHOLD 13
 
 absolute_time_t start, end;
 
@@ -26,7 +26,7 @@ volatile bool turning = false; // track turning
 static float estimate = 0.0f;
 static float uncertainty = 1.0f;
 const float Q = 0.01f;
-const float R = 0.5f;
+const float R = 0.1f;
 
 
 
@@ -64,6 +64,7 @@ void sendPulse(){
 }
 
 float kalman_update(float distance){
+    // try to use multiplication instead of division
     uncertainty += Q;
 
     float K = uncertainty / (uncertainty + R);
@@ -159,15 +160,16 @@ void shared_callback(uint gpio, uint32_t events){
         else{
             uint64_t pulse = absolute_time_diff_us(start, end);
             float raw_distance = pulse * SOUND_SPEED / 2;
-            obstacle_distance = kalman_update(raw_distance);
-            // printf("Distance to obstacle: %.2f\n", obstacle_distance);
+            obstacle_distance = raw_distance;
+            // obstacle_distance = kalman_update(raw_distance);
+            printf("Distance to obstacle: %.2f\n", obstacle_distance);
             if (obstacle_distance <= SAFETY_THRESHOLD && !blocked){
-                // stop_motors();
+                stop_motors();
                 // sleep_ms(1000);
-                turn_right(0.6f,0.4f);
+                // turn_right(0.6f,0.4f);
                 blocked = true;
                 // uint32_t pulses_required = pulses_left + 9;
-                pulse_required = pulses_left + 20;
+                pulse_required = pulses_left + 17;
                 turning = true;
             }
                 // Check if we are turning and whether to stop
