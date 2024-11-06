@@ -52,7 +52,7 @@ void irTask(__unused void *params) {
             }
         }
         
-        vTaskDelay(pdMS_TO_TICKS(1));  // Delay ?? ms between readings
+        vTaskDelay(pdMS_TO_TICKS(10));  // Delay ?? ms between readings
     }
 }
 
