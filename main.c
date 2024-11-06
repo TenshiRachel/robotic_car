@@ -59,14 +59,11 @@ void irTask(__unused void *params) {
 
 // pid task
 void pidTask(__unused void *params) {
-    const TickType_t xFrequency = pdMS_TO_TICKS(10);  // 10 ms interval for PID updates
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-
-    while (1) {
-        pid_timer_callback();  // Call your PID update function
-
-        // Delay until the next cycle
-        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+    struct repeating_timer timer;
+    add_repeating_timer_ms(10, pid_timer_callback, NULL, &timer);
+    while (1)
+    {
+        vTaskDelay(portMAX_DELAY);
     }
 }
 

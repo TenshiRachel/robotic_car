@@ -319,7 +319,7 @@ struct repeating_timer pid_timer;
 
 //     return true;  // Returning true will keep the timer running
 // }
-void pid_timer_callback() {
+bool pid_timer_callback() {
     if (is_moving) {
         // Compute PID output for Motor A
         float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, 
@@ -335,8 +335,25 @@ void pid_timer_callback() {
         move_motor_A(duty_cycle_A, true);
         move_motor_B(duty_cycle_B, true);
     }
+    return true;
 }
+// void pid_timer_callback() {
+//     if (is_moving) {
+//         // Compute PID output for Motor A
+//         float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, 
+//                                          &integral_motorA, &previous_error_motorA, 
+//                                          KpLeft, KiLeft, KdLeft);
+        
+//         // Compute PID output for Motor B
+//         float duty_cycle_B = compute_pid(target_speed_motorB, right_speed, 
+//                                          &integral_motorB, &previous_error_motorB, 
+//                                          KpRight, KiRight, KdRight);
 
+//         // Update motor speeds with the computed duty cycles
+//         move_motor_A(duty_cycle_A, true);
+//         move_motor_B(duty_cycle_B, true);
+//     }
+// }
 void motor_init(){
     
     // Initialize GPIO pins for Motor A and Motor B direction control
