@@ -33,7 +33,7 @@
 
 #define LWIP_SOCKET 1
 #define TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 1UL)
-#define mbaTASK_MESSAGE_BUFFER_SIZE (80) // message buffer size, increase as needed based on individual message size
+#define mbaTASK_MESSAGE_BUFFER_SIZE (192) // message buffer size, increase as needed based on individual message size
 
 #define BUF_SIZE 96
 
@@ -47,7 +47,7 @@ int conn_sock;
 int num_stas;
 uint8_t macs;
 cyw43_t self;
-static MessageBufferHandle_t xSendMessageBuffer = NULL;
+MessageBufferHandle_t xSendMessageBuffer = NULL;
 
 // Function to initialize the message buffer
 void InitMessageBuffer(void)
@@ -72,7 +72,7 @@ size_t ReceiveFromMessageBuffer(void *data, size_t maxSize, TickType_t ticksToWa
 
 void send_data_task(__unused void *params)
 {
-    static char sReceivedData[40] = {0};
+    static char sReceivedData[64] = {0};
     size_t xReceivedBytes;
 
     while (1)
@@ -219,6 +219,8 @@ void wifi_and_server_task(__unused void *params)
 
     cyw43_arch_enable_sta_mode();
     printf("Connecting to Wi-Fi...\n");
+    // if (cyw43_arch_wifi_connect_timeout_ms("LAPTOP-4MHUFCI0", "5La43:30", CYW43_AUTH_WPA2_AES_PSK, 30000))
+
     if (cyw43_arch_wifi_connect_timeout_ms("picow_p5a", "password", CYW43_AUTH_WPA2_AES_PSK, 30000))
     {
         printf("failed to connect.\n");

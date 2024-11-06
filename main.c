@@ -42,7 +42,6 @@ void irBarcodeTask(__unused void *params){
 void irTask(__unused void *params) {
     while (1) {
         int line_state = read_line();  // Read sensor data every 10 ms
-
         if (!blocked) {
             // Control motors based on line state if needed
             if (line_state == WHITE) {
@@ -87,10 +86,10 @@ void vLaunch( void){
     xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 2, &infraTask);
 
     TaskHandle_t infraBarCodeTask;
-    xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 1, &infraBarCodeTask);
+    xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 2, &infraBarCodeTask);
 
     TaskHandle_t task;
-    xTaskCreate(wifi_and_server_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 3, &task);
+    xTaskCreate(wifi_and_server_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &task);
 
     // TaskHandle_t pulseTask;
     // xTaskCreate(pulsesTask, "pulseThread", configMINIMAL_STACK_SIZE, NULL, 2, &pulseTask);

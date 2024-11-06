@@ -111,7 +111,7 @@ bool process_barcode(struct repeating_timer *t)
 
     static int8_t colour = 2;
     static int8_t current_colour = 3;
-    char message[48] = {0};
+    char message[64] = {0};
 
     // if(state2 == 0)
     // {
@@ -214,8 +214,6 @@ bool process_barcode(struct repeating_timer *t)
                 {
                     gap_flag = false;
                     printf("Skip gap pulse!\n");
-                    char msg[] = "Skip gap pulse!\n";
-                    SendToMessageBuffer(msg, sizeof(msg), 0);
                     return true;
                 }
                 
