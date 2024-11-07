@@ -55,4 +55,4 @@ extern bool command_ready; // Flag to indicate new command availability
 
 const char* get_command_buffer(); // Function to retrieve the command buffer
 
-#endif // REMOTE_H
+#endif

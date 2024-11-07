@@ -15,7 +15,7 @@
 #define ACCEL_ADDRESS 0x19
 #define MAG_ADDRESS 0x1E
 #define BUF_SIZE 128
-#define MESSAGE_BUFFER_SIZE 128  // Size of the message buffer
+#define MESSAGE_BUFFER_SIZE 2048  // Size of the message buffer
 
 static int sock;
 static struct sockaddr_in target_addr;
@@ -29,6 +29,8 @@ void wifi_connect_task(__unused void *params) {
         printf("WiFi init failed\n");
         vTaskDelete(NULL);
     }
+
+    cyw43_wifi_pm(&cyw43_state, CYW43_PERFORMANCE_PM);
 
     cyw43_arch_enable_sta_mode();
 
@@ -102,7 +104,7 @@ void read_data_task(__unused void *params) {
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(30));
     }
 }
 
@@ -110,6 +112,7 @@ void read_data_task(__unused void *params) {
 void send_data_task(__unused void *params) {
     char sensor_data[BUF_SIZE];
     size_t received_bytes;
+    static uint32_t packet_count = 0;  // Counter for tracking packets sent
 
     if (sock < 0) {
         vTaskDelete(NULL);  // Exit if socket is invalid
@@ -127,16 +130,19 @@ void send_data_task(__unused void *params) {
             if (result < 0) {
                 printf("Failed to send message: error %d, sock = %d\n", errno, sock);
             } else {
-                printf("Accelerometer and magnetometer data sent successfully\n");
+                // printf("Accelerometer and magnetometer data sent successfully\n");
+                // packet_count++;  // Increment packet count on successful send
+                // printf("Packet %u sent successfully\n", packet_count);
             }
         }
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
 void vLaunch() {
     xTaskCreate(wifi_connect_task, "WiFiTask", 2048, NULL, 1, NULL);
-    xTaskCreate(read_data_task, "DataAcquisition", 2048, NULL, 1, NULL);
-    xTaskCreate(send_data_task, "DataTransmission", 2048, NULL, 1, NULL);
+    xTaskCreate(read_data_task, "DataAcquisition", 4096, NULL, 1, NULL);
+    xTaskCreate(send_data_task, "DataTransmission", 4096, NULL, 2, NULL);
 
 #if NO_SYS && configUSE_CORE_AFFINITY && configNUMBER_OF_CORES > 1
         // we must bind the main task to one core (well at least while the init is called)
