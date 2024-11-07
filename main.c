@@ -77,8 +77,6 @@ void vLaunch( void){
     // TaskHandle_t infraBarCodeTask;
     // xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
 
-    // TaskHandle_t pulseTask;
-    // xTaskCreate(pulsesTask, "pulseThread", configMINIMAL_STACK_SIZE, NULL, 2, &pulseTask);
     TaskHandle_t pidUpdateTask;
     xTaskCreate(pidTask, "pidThread", configMINIMAL_STACK_SIZE,NULL,3, &pidUpdateTask);
 
