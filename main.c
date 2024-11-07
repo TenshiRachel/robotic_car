@@ -56,22 +56,6 @@ void irTask(__unused void *params) {
     }
 }
 
-// void pulsesTask(__unused void *params){
-//     if (blocked)
-//     {
-//         sleep_ms(1000);
-//         turn_right(0.5f,0.48f);
-//     }
-//     uint32_t pulse_required = pulses_left + 9;
-//     while (1)
-//     {
-//         if (pulses_left >= pulse_required)
-//         {
-//             stop_motors();
-//         }
-//         vTaskDelay(pdMS_TO_TICKS(1));  // Delay ?? ms between readings
-//     }
-// }
 
 void main_task(__unused void *params)
 {
@@ -90,9 +74,6 @@ void vLaunch( void){
 
     TaskHandle_t task;
     xTaskCreate(wifi_and_server_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &task);
-
-    // TaskHandle_t pulseTask;
-    // xTaskCreate(pulsesTask, "pulseThread", configMINIMAL_STACK_SIZE, NULL, 2, &pulseTask);
 
 #if NO_SYS && configUSE_CORE_AFFINITY && configNUM_CORES > 1
     // we must bind the main task to one core (well at least while the init is called)
