@@ -14,14 +14,14 @@
 #define SOUND_SPEED 0.0343f
 #define TIMEOUT_US 26100
 #define SAFETY_THRESHOLD 18
-
+// #define SAFETY_THRESHOLD 15
 absolute_time_t start, end;
 
 static float obstacle_distance = 0.0f;
 
-// john
 volatile bool blocked = false;  // Flag to enable/disable callback
 volatile bool turning = false; // track turning
+
 // Kalman filter variables
 static float estimate = 0.0f;
 static float uncertainty = 1.0f;
@@ -39,13 +39,11 @@ const float R = 0.1f;
 #define TIMEOUT_MS 1000   // Timeout after 1 second to reset pulse widths
 #define NOTCHES_CM 1.025f // Circumference 21cm, 20 notches, therefore 1 notch approx 20.5/20cm
 
-// changed  to volatile for extern
 volatile uint32_t pulses_left = 0;
 volatile uint32_t pulses_right = 0;
-// john
 volatile float left_speed = 0;
 volatile float right_speed = 0;
-volatile uint32_t pulse_required = 0; // Global to store the target pulse count
+volatile uint32_t pulse_required = 0; // Global to store the target pulse count for turning
 
 
 static float pulse_width_left, pulse_width_right;
@@ -149,34 +147,27 @@ void shared_callback(uint gpio, uint32_t events){
             float raw_distance = pulse * SOUND_SPEED / 2;
             obstacle_distance = raw_distance;
             // obstacle_distance = kalman_update(raw_distance);
-            // printf("Distance to obstacle: %.2f\n", obstacle_distance);
+            printf("Distance to obstacle: %.2f\n", obstacle_distance);
             if (obstacle_distance <= SAFETY_THRESHOLD && !blocked){
                 stop_motors();
-                // sleep_ms(1000);
-                turn_right(0.8f,0.65f);
+                turn_right(0.8f, 0.75f);
                 blocked = true;
-                // uint32_t pulses_required = pulses_left + 9;
-                pulse_required = pulses_left + 9;
+
+                pulse_required = pulses_left + 10; // 10 pulses to turn 90 deg angle
                 turning = true;
             }
                 // Check if we are turning and whether to stop
             if (turning && pulses_left >= pulse_required) {
                 stop_motors();
                 turning = false; // Reset the turning state
-                end_distance = total_distance + 90;
-                printf("stop at distance %f\n", total_distance);
-
-                printf("ending at distance +90cm %f\n", end_distance);
-
+                end_distance = total_distance + 90; // 90 cm to get expected final distance
             }
             else if (obstacle_distance > SAFETY_THRESHOLD && blocked && !turning) {
                 if (total_distance < end_distance) {
                     move_up();
-                    printf("current : %f , end : %f\n", total_distance, end_distance);
                 } else { // total distance > end_distance , then stop motor
                     stop_motors();
                     blocked = false;
-                    printf("Reached end distance, stopping motors\n");
                 }
             }
         }
