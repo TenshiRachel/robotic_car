@@ -94,12 +94,12 @@
 #if defined(STATIC_IP) // if STATIC_IP is defined in the cmake target compile definitons, configure a static IP
 #undef LWIP_DHCP
 #define LWIP_DHCP 0 // disable the dhcp client as we are using static ip
-#define CYW43_DEFAULT_IP_STA_GATEWAY LWIP_MAKEU32(192, 168, 137, 1)  // set static gateway
+#define CYW43_DEFAULT_IP_STA_GATEWAY LWIP_MAKEU32(192, 168, 4, 1)  // set static gateway
 
 #if PICO_ROLE == REMOTE // if PICO_ROLE = 1 in the cmake 
-#define CYW43_DEFAULT_IP_STA_ADDRESS LWIP_MAKEU32(192, 168, 137, 65) // change this to something in your hotspot's subnet to test
+#define CYW43_DEFAULT_IP_STA_ADDRESS LWIP_MAKEU32(192, 168, 4, 2) // change this to something in your hotspot's subnet to test
 #elif PICO_ROLE == DASHBOARD // if PICO_ROLE = 1 in the cmake
-#define CYW43_DEFAULT_IP_STA_ADDRESS LWIP_MAKEU32(192, 168, 137, 192) // change this to something in your hotspot's subnet to test
+#define CYW43_DEFAULT_IP_STA_ADDRESS LWIP_MAKEU32(192, 168, 4, 3) // change this to something in your hotspot's subnet to test
 #endif
 
 #endif
