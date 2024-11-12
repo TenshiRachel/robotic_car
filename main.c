@@ -9,14 +9,14 @@
 #include "components/ir_sensor/ir_line_following.h"
 
 // Lib
-#include "FreeRTOS.h"
-#include "task.h"
-#include "message_buffer.h"
-
+// #include "FreeRTOS.h"
+// #include "task.h"
+// #include "message_buffer.h"
+#include "components/wifi/car/wifi.h"
 #define WHITE 0
 #define BLACK 1
 #define ON_LINE 2
-
+#define mbaTASK_MESSAGE_BUFFER_SIZE (80) // message buffer size, increase as needed based on individual message size
 
 void ultrasonicTask(__unused void *params){
     // Ultrasonic
@@ -42,32 +42,38 @@ void irBarcodeTask(__unused void *params){
 void irTask(__unused void *params) {
     while (1) {
         int line_state = read_line();  // Read sensor data every 10 ms
-
         if (!blocked) {
             // Control motors based on line state if needed
             if (line_state == WHITE) {
-                turn_left(0.45f,0.65f);
+                turn_left(0.0f,0.5f);
             } else if (line_state == BLACK) {
-                turn_right(0.5f,0.7f);
-                // move_forward(0.8f,0.8f);
-            } else {
-                move_forward(0.8f,0.8f);
+                // turn_right(0.5f,0.7f);
+                move_forward(0.55f,0.5f);
             }
         }
         
-        vTaskDelay(pdMS_TO_TICKS(1));  // Delay ?? ms between readings
+        vTaskDelay(pdMS_TO_TICKS(10));  // Delay ?? ms between readings
     }
 }
 
+
+void main_task(__unused void *params)
+{
+    
+}
 void vLaunch( void){
-    TaskHandle_t ultratask;
-    xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 5, &ultratask);
+    // TaskHandle_t ultratask;
+    // xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 5, &ultratask);
+    InitMessageBuffer();
 
     TaskHandle_t infraTask;
-    xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
+    xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 2, &infraTask);
 
     TaskHandle_t infraBarCodeTask;
-    xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
+    xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 2, &infraBarCodeTask);
+
+    TaskHandle_t task;
+    xTaskCreate(wifi_and_server_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &task);
 
 #if NO_SYS && configUSE_CORE_AFFINITY && configNUM_CORES > 1
     // we must bind the main task to one core (well at least while the init is called)
@@ -82,10 +88,13 @@ void vLaunch( void){
 
 int main(){
     stdio_init_all();
+    sleep_ms(3000);
 
     // Init components
-    ultrasonic_init();
+    // swapped wheel encoder and ultrasonic init!
     // wheel_encoder_init();
+    // ultrasonic_init();
+
     motor_init();
     ir_init_barcode();
     ir_init_linefollow();

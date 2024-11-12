@@ -24,9 +24,12 @@ components/wheel_encoder/wheel_encoder.c
 components/motor_control/motor_control.c
 components/ir_sensor/ir_sensor.c
 components/ir_sensor/ir_line_following.c
+components/wifi/car/wifi.c
 )
 
 target_compile_definitions(robotic_car PRIVATE
+        STATIC_IP=1    # uncomment this to disable dhcp client and use static ip addr. must be used in conjunction with PICO_ROLE
+        PICO_ROLE=1    # uncomment this to set the appropriate static ip. refer to lwipopts_examples_common.h for more info
         NO_SYS=0            # don't want NO_SYS (generally this would be in your lwipopts.h)
         LWIP_SOCKET=1       # we need the socket API (generally this would be in your lwipopts.h)
         PING_USE_SOCKETS=1

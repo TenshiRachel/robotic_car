@@ -3,27 +3,18 @@
 #include "hardware/pwm.h"
 #include "hardware/timer.h"
 
-// Define GPIO pins for Motor A
-// #define PWM_PIN_A 2     // GP2 for Motor A PWM
-// #define DIR_PIN_A1 0    // GP0 for Motor A direction
-// #define DIR_PIN_A2 1    // GP1 for Motor A direction
+#include "components/wheel_encoder/wheel_encoder.h"
+// Define GPIO pins for Motor A (LEFT)
 #define PWM_PIN_A 14     // GP2 for Motor A PWM
 #define DIR_PIN_A1 10    // GP0 for Motor A direction
 #define DIR_PIN_A2 11    // GP1 for Motor A direction
 
-// Define GPIO pins for Motor B
-// #define PWM_PIN_B 3     // GP3 for Motor B PWM
-// #define DIR_PIN_B1 4    // GP4 for Motor B direction
-// #define DIR_PIN_B2 5    // GP5 for Motor B direction
+// Define GPIO pins for Motor B (RIGHT)
 #define PWM_PIN_B 15    // GP3 for Motor B PWM
 #define DIR_PIN_B1 12    // GP4 for Motor B direction
 #define DIR_PIN_B2 13   // GP5 for Motor B direction
 
-// Define GPIO pin for interrupt (for Week 8 Demo)
-#define BTN_PIN 21
-#define DEBOUNCE_TIME 200  // milliseconds
-static absolute_time_t last_press_time;
-static int motor_action_index = 0; // State variable to track the current action
+volatile bool is_moving = false; // track if car is moving or not 
 
 // Function to set up the PWM
 void setup_pwm(uint gpio, float freq, float duty_cycle) {
@@ -84,25 +75,14 @@ void move_motor_B(float duty_cycle, bool forward){
 
 // both motors forward (both directions forward)
 void move_forward(float duty_cycle_A, float duty_cycle_B) {
-    // // with wheel encoder implementation
-    // float current_speed_motorA = 0.5f; // get from wheel encoder??
-    // float current_speed_motorB = 0.5f;
-    // duty_cycle_A = compute_pid(target_speed_motorA, current_speed_motorA, &previous_error_motorA, &integral_motorA);
-    // duty_cycle_B = compute_pid(target_speed_motorB, current_speed_motorB, &previous_error_motorB, &integral_motorB);
-    // move_motor_A(duty_cycle_A, true); // move A forward
-    // move_motor_B(duty_cycle_B, true); // move B forward
-    // // end
     move_motor_A(duty_cycle_A, true); // move A forward
     move_motor_B(duty_cycle_B, true); // move B forward
-    printf("moving forward, duty cycle A: %.2f, duty cycle B: %.2f\n", duty_cycle_A, duty_cycle_B);
-
 }
 
 // both motors backward (both directions backward)
 void move_backward(float duty_cycle_A, float duty_cycle_B) {
     move_motor_A(duty_cycle_A, false); // move A backward
     move_motor_B(duty_cycle_B, false); // move B backward
-    printf("moving backwards, duty cycle A: %.2f, duty cycle B: %.2f\n", duty_cycle_A, duty_cycle_B);
 
 }
 
@@ -112,95 +92,33 @@ void stop_motors() {
     gpio_put(DIR_PIN_A2, 0);
     gpio_put(DIR_PIN_B1, 0);
     gpio_put(DIR_PIN_B2, 0);
-    printf("stopping\n");
+    is_moving = false;
 }
-
-
-// // turn left (Motor A forward, Motor B backward)
-// void turn_left(float duty_cycle_A, float duty_cycle_B) {
-//     move_motor_A(duty_cycle_A, true);   // Motor A forward
-//     move_motor_B(duty_cycle_B, false);  // Motor B backward
-//     printf("turning left, duty cycle A: %.2f, duty cycle B: %.2f\n", duty_cycle_A, duty_cycle_B);
-// }
-
-// // turn right (Motor A backward, Motor B forward)
-// void turn_right(float duty_cycle_A, float duty_cycle_B) {
-//     move_motor_A(duty_cycle_A, false);  // Motor A backward
-//     move_motor_B(duty_cycle_B, true);   // Motor B forward
-//     printf("turning right, duty cycle A: %.2f, duty cycle B: %.2f\n", duty_cycle_A, duty_cycle_B);
-// }
 
 
 // turn left (Motor A forward, Motor B backward)
 void turn_left(float duty_cycle_A, float duty_cycle_B) {
-    // move_motor_A(duty_cycle_A, false);   // Motor A forward
-    // move_motor_A(duty_cycle_A, false);   // Motor A forward
-    move_motor_B(duty_cycle_A, true);   // Motor A forward
-    move_motor_A(duty_cycle_B,false);
-    // move_motor_B(duty_cycle_B,true);
+    move_motor_A(duty_cycle_A,false);   // motor A backward
+    move_motor_B(duty_cycle_B, true);   // Motor B forward
 }
 
+// turn right (Motor A backward, Motor B forward)
 void turn_right(float duty_cycle_A, float duty_cycle_B){
     move_motor_A(duty_cycle_A, true);
     move_motor_B(duty_cycle_B,false);
 }
 
-// GPIO interrupt callback function (Week 8 Demo)
-void motor_callback(uint gpio, uint32_t events) {
-    absolute_time_t current_time = get_absolute_time();
 
-    if (events & GPIO_IRQ_EDGE_FALL) {  // Button pressed
-        if (absolute_time_diff_us(last_press_time, current_time) < DEBOUNCE_TIME * 1000) {
-            return;  // Ignore if too soon
-        }
-        last_press_time = current_time;  // Update last pressed time
+// PID Constants for Motor A
+float KpLeft = 0.21f; // Proportional: used to correct how far current is from the setpoint
+float KiLeft = 0.03f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
+float KdLeft = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
 
-        // Call the function based on the current index
-        switch (motor_action_index) {
-            case 0:
-                move_forward(0.5f, 0.5f);  // Move forward
-                break;
-            case 1:
-                stop_motors();
-                break;
-            // case 2:
-            //     move_forward(0.4f,0.4f); // move forward slower
-            //     break;
-            // case 3:
-            //     move_backward(0.5f, 0.5f); // Move backward
-            //     break;
-            // case 4:
-            //     move_backward(0.8f,0.8f); // move backward faster
-            //     break;
-            // case 5:
-            //     move_backward(0.4f,0.4f); // move backward slower
-            //     break;                
-            // case 6:
-            //     stop_motors();             // Stop motors
-            //     break;
-            // case 7:
-            //     turn_left(0.5f, 0.4f);     // Turn left
-            //     break;
-            // case 8:
-            //     turn_right(0.4f, 0.5f);    // Turn right
-            //     break;
-        }
+// PID Constants for Motor B
+float KpRight= 0.295f; // Proportional: used to correct how far current is from the setpoint
+float KiRight = 0.03f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
+float KdRight = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
 
-        // Update the action index, wrapping around if necessary
-        motor_action_index = (motor_action_index + 1) % 2;
-    }
-}
-
-
-// PID stuff
-
-// PID constants 
-// !! TO BE ADJUSTED BASED ON ACTUAL MOVEMENT
-float Kp = 1.0f; // Proportional: used to correct how far current is from the setpoint
-float Ki = 0.1f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
-float Kd = 0.05f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
-
-// Motor A and B 
 // track prev error and integral of respective motors
 float previous_error_motorA = 0.0f;
 float integral_motorA = 0.0f;
@@ -208,13 +126,12 @@ float integral_motorA = 0.0f;
 float previous_error_motorB = 0.0f;
 float integral_motorB = 0.0f;
 
-// set point / desired position / target for duty cycle
-float target_speed_motorA = 0.5f;
-float target_speed_motorB = 0.5f;
-
+// setpoint for motors
+float target_speed_motorA = 0.0f;
+float target_speed_motorB = 0.0f;
 
 // Function to compute the control signal
-float compute_pid(float setpoint, float current_value, float *integral, float *prev_error) {
+float compute_pid(float setpoint, float current_value, float *integral, float *prev_error, float Kp, float Ki, float Kd) {
 
     float error = setpoint - current_value;
     
@@ -227,26 +144,60 @@ float compute_pid(float setpoint, float current_value, float *integral, float *p
     *prev_error = error;
 
     // set boundary so that calculated signal will be within PWM range
-    // UNSURE , NEED TO TEST 
-    if (control_signal > 1.0f)
+    if (control_signal >= 1.0f)
     {
-        control_signal = 1.0f;
+        control_signal = 0.99f;
+        *integral = 0;
     }
     else if (control_signal < 0.0f)
     {
         control_signal = 0.0f;
+        *integral = 0;
     }
 
     return control_signal;
 }
 
 
+// both motors forward with PID
+void move_up(){
+    target_speed_motorA = 35.0f;
+    target_speed_motorB = 35.0f;
+    // get duty cycle based on PID
+    float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, &integral_motorA, &previous_error_motorA, KpLeft, KiLeft, KdLeft);
+    float duty_cycle_B = compute_pid(target_speed_motorB, right_speed, &integral_motorB,&previous_error_motorB, KpRight, KiRight, KdRight);
+    move_motor_A(duty_cycle_A, true); // move A forward with duty cycle from PID
+    move_motor_B(duty_cycle_B, true); // move B forward with duty cycle from PID
+    is_moving = true;
+}
+
+struct repeating_timer pid_timer;
+
+bool pid_timer_callback() {
+    if (is_moving) {
+        // Compute PID output for Motor A
+        float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, 
+                                         &integral_motorA, &previous_error_motorA, 
+                                         KpLeft, KiLeft, KdLeft);
+        
+        // Compute PID output for Motor B
+        float duty_cycle_B = compute_pid(target_speed_motorB, right_speed, 
+                                         &integral_motorB, &previous_error_motorB, 
+                                         KpRight, KiRight, KdRight);
+
+        // Update motor speeds with the computed duty cycles
+        move_motor_A(duty_cycle_A, true);
+        move_motor_B(duty_cycle_B, true);
+    }
+    return true;
+}
+
 void motor_init(){
     
     // Initialize GPIO pins for Motor A and Motor B direction control
     gpio_init(DIR_PIN_A1);
     gpio_init(DIR_PIN_A2);
-    gpio_set_dir(DIR_PIN_A1, GPIO_OUT);
+    gpio_set_dir(DIR_PIN_A1, GPIO_OUT); 
     gpio_set_dir(DIR_PIN_A2, GPIO_OUT);
 
     gpio_init(DIR_PIN_B1);
@@ -254,13 +205,5 @@ void motor_init(){
     gpio_set_dir(DIR_PIN_B1, GPIO_OUT);
     gpio_set_dir(DIR_PIN_B2, GPIO_OUT);
 
-    // Configure GP21 as input with pull-up resistor
-    gpio_set_dir(BTN_PIN, GPIO_IN);
-    gpio_set_pulls(BTN_PIN, true, false);
-
-    move_forward(0.5f,0.5f); // move forward slower
-    
-
-    // Enable GPIO interrupts for rising and falling edges on the GP21 button press/release
-    // gpio_set_irq_enabled_with_callback(BTN_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &motor_callback);
+    move_forward(0.55f,0.5f); // move car forward
 }
