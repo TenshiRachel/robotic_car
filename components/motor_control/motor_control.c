@@ -5,19 +5,20 @@
 
 #include "components/wheel_encoder/wheel_encoder.h"
 // Define GPIO pins for Motor A (LEFT)
-#define PWM_PIN_A 14     // GP2 for Motor A PWM
-#define DIR_PIN_A1 10    // GP0 for Motor A direction
-#define DIR_PIN_A2 11    // GP1 for Motor A direction
+#define LEFT_MOTOR_ENA 14     // GP2 for Motor A PWM
+#define LEFT_MOTOR_IN1 10    // GP0 for Motor A direction
+#define LEFT_MOTOR_IN2 11    // GP1 for Motor A direction
 
 // Define GPIO pins for Motor B (RIGHT)
-#define PWM_PIN_B 15    // GP3 for Motor B PWM
-#define DIR_PIN_B1 12    // GP4 for Motor B direction
-#define DIR_PIN_B2 13   // GP5 for Motor B direction
+#define RIGHT_MOTOR_ENB 15    // GP3 for Motor B PWM
+#define RIGHT_MOTOR_IN3 12    // GP4 for Motor B direction
+#define RIGHT_MOTOR_IN4 13   // GP5 for Motor B direction
 
 volatile bool is_moving = false; // track if car is moving or not 
 
 // Function to set up the PWM
-void setup_pwm(uint gpio, float freq, float duty_cycle) {
+// void setup_pwm(uint gpio, float freq, float duty_cycle) {
+void setup_pwm(uint gpio, float freq) {
     // Set the GPIO function to PWM
     gpio_set_function(gpio, GPIO_FUNC_PWM);
 
@@ -32,92 +33,107 @@ void setup_pwm(uint gpio, float freq, float duty_cycle) {
     // Set the PWM wrap value (maximum count value) -- for 65536 cycles
     pwm_set_wrap(slice_num, 65535);  // 16-bit counter (0 - 65535)
 
-    // Set the duty cycle
-    pwm_set_gpio_level(gpio, (uint16_t)(duty_cycle * 65536));
+    // // Set the duty cycle
+    // pwm_set_gpio_level(gpio, (uint16_t)(duty_cycle * 65536));
 
     // Enable the PWM
     pwm_set_enabled(slice_num, true);
 }
 
-// Function to move Motor A
-void move_motor_A(float duty_cycle, bool forward){
-    if (forward)
-    {
-    gpio_put(DIR_PIN_A1, 1);
-    gpio_put(DIR_PIN_A2, 0);
-    }
-    else
-    { // move backwards
-    gpio_put(DIR_PIN_A1, 0);
-    gpio_put(DIR_PIN_A2, 1);
-    }
+void set_duty_cycle(uint gpio, float duty_cycle)
+{
+    pwm_set_gpio_level(gpio, (uint16_t)(duty_cycle * 65536));
 
-    setup_pwm(PWM_PIN_A, 100.0f, duty_cycle);    
 }
 
-// Function to move Motor B
-void move_motor_B(float duty_cycle, bool forward){
+// Function to move LEFT motor
+void move_left_motor(float duty_cycle, bool forward){
     if (forward)
     {
-    gpio_put(DIR_PIN_B1, 1);
-    gpio_put(DIR_PIN_B2, 0);
+    gpio_put(LEFT_MOTOR_IN1, 1);
+    gpio_put(LEFT_MOTOR_IN2, 0);
+    }
+    else
+    { // move backwards
+    gpio_put(LEFT_MOTOR_IN1, 0);
+    gpio_put(LEFT_MOTOR_IN2, 1);
+    }
+    // setup_pwm(LEFT_MOTOR_ENA, 100.0f, duty_cycle);   
+    set_duty_cycle(LEFT_MOTOR_ENA,duty_cycle);
+ 
+}
+
+// Function to move RIGHT motor
+void move_right_motor(float duty_cycle, bool forward){
+    if (forward)
+    {
+    gpio_put(RIGHT_MOTOR_IN3, 1);
+    gpio_put(RIGHT_MOTOR_IN4, 0);
     }
 
     else
     { // move backwards
-    gpio_put(DIR_PIN_B1, 0);
-    gpio_put(DIR_PIN_B2, 1);
+    gpio_put(RIGHT_MOTOR_IN3, 0);
+    gpio_put(RIGHT_MOTOR_IN4, 1);
     }
 
-    setup_pwm(PWM_PIN_B, 100.0f, duty_cycle);    
+    // setup_pwm(RIGHT_MOTOR_ENB, 100.0f, duty_cycle); 
+    set_duty_cycle(RIGHT_MOTOR_ENB, duty_cycle);   
 }
 
 
 // both motors forward (both directions forward)
 void move_forward(float duty_cycle_A, float duty_cycle_B) {
-    move_motor_A(duty_cycle_A, true); // move A forward
-    move_motor_B(duty_cycle_B, true); // move B forward
+    move_left_motor(duty_cycle_A, true); // move A forward
+    move_right_motor(duty_cycle_B, true); // move B forward
 }
 
 // both motors backward (both directions backward)
 void move_backward(float duty_cycle_A, float duty_cycle_B) {
-    move_motor_A(duty_cycle_A, false); // move A backward
-    move_motor_B(duty_cycle_B, false); // move B backward
+    move_left_motor(duty_cycle_A, false); // move A backward
+    move_right_motor(duty_cycle_B, false); // move B backward
 
 }
 
 // Function to stop both motors
 void stop_motors() {
-    gpio_put(DIR_PIN_A1, 0);
-    gpio_put(DIR_PIN_A2, 0);
-    gpio_put(DIR_PIN_B1, 0);
-    gpio_put(DIR_PIN_B2, 0);
+    gpio_put(LEFT_MOTOR_IN1, 0);
+    gpio_put(LEFT_MOTOR_IN2, 0);
+    gpio_put(RIGHT_MOTOR_IN3, 0);
+    gpio_put(RIGHT_MOTOR_IN4, 0);
     is_moving = false;
 }
 
 
-// turn left (Motor A forward, Motor B backward)
 void turn_left(float duty_cycle_A, float duty_cycle_B) {
-    move_motor_A(duty_cycle_A,false);   // motor A backward
-    move_motor_B(duty_cycle_B, true);   // Motor B forward
+    move_left_motor(duty_cycle_A,false);   // LEFT motor backward
+    move_right_motor(duty_cycle_B, true);   // RIGHT motor forward
 }
 
-// turn right (Motor A backward, Motor B forward)
 void turn_right(float duty_cycle_A, float duty_cycle_B){
-    move_motor_A(duty_cycle_A, true);
-    move_motor_B(duty_cycle_B,false);
+    move_left_motor(duty_cycle_A, true); // LEFT motor forward
+    move_right_motor(duty_cycle_B,false); // RIGHT motor backward
 }
 
 
 // PID Constants for Motor A
-float KpLeft = 0.21f; // Proportional: used to correct how far current is from the setpoint
-float KiLeft = 0.03f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
-float KdLeft = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
+// float KpLeft = 0.21f; // Proportional: used to correct how far current is from the setpoint
+// float KiLeft = 0.03f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
+// float KdLeft = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
+
+// // PID Constants for Motor B
+// float KpRight= 0.295f; // Proportional: used to correct how far current is from the setpoint
+// float KiRight = 0.03f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
+// float KdRight = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
+
+float KpLeft = 0.24f; // Proportional: used to correct how far current is from the setpoint
+float KiLeft = 0.00f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
+float KdLeft = 0.00f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
 
 // PID Constants for Motor B
-float KpRight= 0.295f; // Proportional: used to correct how far current is from the setpoint
-float KiRight = 0.03f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
-float KdRight = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
+float KpRight= 0.24f; // Proportional: used to correct how far current is from the setpoint
+float KiRight = 0.01f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
+float KdRight = 0.00f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
 
 // track prev error and integral of respective motors
 float previous_error_motorA = 0.0f;
@@ -142,32 +158,39 @@ float compute_pid(float setpoint, float current_value, float *integral, float *p
     float control_signal = Kp * error + Ki * (*integral) + Kd * derivative; 
 
     *prev_error = error;
+    
+    float max_integral = 10.0f; // Adjust this limit as needed
+    if (*integral > max_integral) *integral = max_integral;
+    else if (*integral < -max_integral) *integral = -max_integral;
 
+
+    float motor_response = control_signal * 0.1;  // Motor response model
+    // printf("Control Signal: %f , Motor Response: %f, current value: %f\n", control_signal,motor_response,current_value);    
     // set boundary so that calculated signal will be within PWM range
-    if (control_signal >= 1.0f)
-    {
-        control_signal = 0.99f;
-        *integral = 0;
-    }
-    else if (control_signal < 0.0f)
-    {
-        control_signal = 0.0f;
-        *integral = 0;
-    }
+    // if (control_signal >= 1.0f)
+    // {
+    //     control_signal = 0.99f;
+    //     *integral = 0;
+    // }
+    // else if (control_signal < 0.0f)
+    // {
+    //     control_signal = 0.0f;
+    //     *integral = 0;
+    // }
 
-    return control_signal;
+    return motor_response;
 }
 
 
 // both motors forward with PID
 void move_up(){
-    target_speed_motorA = 35.0f;
-    target_speed_motorB = 35.0f;
+    target_speed_motorA = 15.0f;
+    target_speed_motorB = 15.0f;
     // get duty cycle based on PID
     float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, &integral_motorA, &previous_error_motorA, KpLeft, KiLeft, KdLeft);
     float duty_cycle_B = compute_pid(target_speed_motorB, right_speed, &integral_motorB,&previous_error_motorB, KpRight, KiRight, KdRight);
-    move_motor_A(duty_cycle_A, true); // move A forward with duty cycle from PID
-    move_motor_B(duty_cycle_B, true); // move B forward with duty cycle from PID
+    move_left_motor(duty_cycle_A, true); // move A forward with duty cycle from PID
+    move_right_motor(duty_cycle_B, true); // move B forward with duty cycle from PID
     is_moving = true;
 }
 
@@ -186,8 +209,8 @@ bool pid_timer_callback() {
                                          KpRight, KiRight, KdRight);
 
         // Update motor speeds with the computed duty cycles
-        move_motor_A(duty_cycle_A, true);
-        move_motor_B(duty_cycle_B, true);
+        move_left_motor(duty_cycle_A, true);
+        move_right_motor(duty_cycle_B, true);
     }
     return true;
 }
@@ -195,15 +218,19 @@ bool pid_timer_callback() {
 void motor_init(){
     
     // Initialize GPIO pins for Motor A and Motor B direction control
-    gpio_init(DIR_PIN_A1);
-    gpio_init(DIR_PIN_A2);
-    gpio_set_dir(DIR_PIN_A1, GPIO_OUT); 
-    gpio_set_dir(DIR_PIN_A2, GPIO_OUT);
+    gpio_init(LEFT_MOTOR_IN1);
+    gpio_init(LEFT_MOTOR_IN2);
+    gpio_set_dir(LEFT_MOTOR_IN1, GPIO_OUT); 
+    gpio_set_dir(LEFT_MOTOR_IN2, GPIO_OUT);
 
-    gpio_init(DIR_PIN_B1);
-    gpio_init(DIR_PIN_B2);
-    gpio_set_dir(DIR_PIN_B1, GPIO_OUT);
-    gpio_set_dir(DIR_PIN_B2, GPIO_OUT);
+    gpio_init(RIGHT_MOTOR_IN3);
+    gpio_init(RIGHT_MOTOR_IN4);
+    gpio_set_dir(RIGHT_MOTOR_IN3, GPIO_OUT);
+    gpio_set_dir(RIGHT_MOTOR_IN4, GPIO_OUT);
+    // move_forward(0.8f,0.8f);
+    
+    setup_pwm(LEFT_MOTOR_ENA, 100.0f);
+    setup_pwm(RIGHT_MOTOR_ENB, 100.0f);    
 
     move_up(); // move forward with PID
 }
