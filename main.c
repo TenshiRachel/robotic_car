@@ -2,8 +2,7 @@
 #include "pico/stdlib.h"
 
 // Components
-#include "components/ultrasonic/ultrasonic.h"
-#include "components/wheel_encoder/wheel_encoder.h"
+#include "components/ultrasonic_encoder/ultrasonic_encoder.h"
 #include "components/motor_control/motor_control.h"
 #include "components/ir_sensor/ir_sensor.h"
 #include "components/ir_sensor/ir_line_following.h"

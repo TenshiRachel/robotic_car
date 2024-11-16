@@ -59,19 +59,6 @@ void sendPulse(){
     gpio_put(TRIG_PIN, 0);
 }
 
-float kalman_update(float distance){
-    // try to use multiplication instead of division
-    uncertainty += Q;
-
-    float K = uncertainty / (uncertainty + R);
-
-    estimate = estimate + K * (distance - estimate);
-
-    uncertainty = (1 - K) * uncertainty;
-    
-    return estimate;
-}
-
 // from wheel encoder
 void set_speed_distance()
 {
@@ -81,10 +68,10 @@ void set_speed_distance()
     total_distance = ((dist_left + dist_right) / 2);
     // printf("distance: %f, pulse left: %d, pulse right: %d \n", total_distance, pulses_left, pulses_right);
 
-    left_speed = (pulse_width_left > 0) ? NOTCHES_CM / pulse_width_left : 0;
-    right_speed = (pulse_width_right > 0) ? NOTCHES_CM / pulse_width_right : 0;
-    // printf("Speed left: %.2fcm/s\n", left_speed);
-    // printf("Speed right: %.2fcm/s\n", right_speed);
+    left_speed = (pulse_width_left > 0) ? (NOTCHES_CM / pulse_width_left) * 1000 : 0;
+    right_speed = (pulse_width_right > 0) ? (NOTCHES_CM / pulse_width_right) * 1000 : 0;
+    printf("Speed left: %.2fcm/s\n", left_speed);
+    printf("Speed right: %.2fcm/s\n", right_speed);
 
     speed = (left_speed + right_speed) / 2;
 }
@@ -92,19 +79,19 @@ void set_speed_distance()
 void shared_callback(uint gpio, uint32_t events){
     if (gpio == LEFT_ENCODER_PIN || gpio == RIGHT_ENCODER_PIN)
     {
-        absolute_time_t current_time = get_absolute_time();
+        volatile absolute_time_t current_time = get_absolute_time();
         if (gpio == LEFT_ENCODER_PIN)
         {
             pulses_left++;
-            int64_t time_diff = absolute_time_diff_us(last_time_left, current_time);
+            volatile int64_t time_diff_left = absolute_time_diff_us(last_time_left, current_time);
 
-            if (time_diff > TIMEOUT_MS * 1000)
+            if (time_diff_left > TIMEOUT_MS * 1000)
             {
                 pulse_width_left = 0.0f;
             }
             else
             {
-                pulse_width_left = (float)(time_diff / 1000000.0f); // Convert to seconds
+                pulse_width_left = (float)(time_diff_left / 1000.0f); // Convert to ms
                 // printf("Pulse width left: %f\n", pulse_width_left);
             }
             // printf("Pulses Left: %u\n", pulses_left);
@@ -114,15 +101,15 @@ void shared_callback(uint gpio, uint32_t events){
         if (gpio == RIGHT_ENCODER_PIN)
         {
             pulses_right++;
-            int64_t time_diff = absolute_time_diff_us(last_time_right, current_time);
+            volatile int64_t time_diff_right = absolute_time_diff_us(last_time_right, current_time);
 
-            if (time_diff > TIMEOUT_MS * 1000)
+            if (time_diff_right > TIMEOUT_MS * 1000)
             {
                 pulse_width_right = 0.0f;
             }
             else
             {
-                pulse_width_right = (float)(time_diff / 1000000.0f);
+                pulse_width_right = (float)(time_diff_right / 1000.0f);
                 // printf("Pulse width right: %f\n", pulse_width_right);
             }
 

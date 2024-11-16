@@ -3,7 +3,7 @@
 #include "hardware/pwm.h"
 #include "hardware/timer.h"
 
-#include "components/wheel_encoder/wheel_encoder.h"
+#include "components/ultrasonic_encoder/ultrasonic_encoder.h"
 // Define GPIO pins for Motor A (LEFT)
 #define LEFT_MOTOR_ENA 14     // GP2 for Motor A PWM
 #define LEFT_MOTOR_IN1 10    // GP0 for Motor A direction
@@ -126,12 +126,12 @@ void turn_right(float duty_cycle_A, float duty_cycle_B){
 // float KiRight = 0.03f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
 // float KdRight = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
 
-float KpLeft = 0.24f; // Proportional: used to correct how far current is from the setpoint
+float KpLeft = 0.17f; // Proportional: used to correct how far current is from the setpoint
 float KiLeft = 0.00f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
 float KdLeft = 0.00f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
 
 // PID Constants for Motor B
-float KpRight= 0.24f; // Proportional: used to correct how far current is from the setpoint
+float KpRight= 0.17f; // Proportional: used to correct how far current is from the setpoint
 float KiRight = 0.01f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
 float KdRight = 0.00f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
 
@@ -165,7 +165,7 @@ float compute_pid(float setpoint, float current_value, float *integral, float *p
 
 
     float motor_response = control_signal * 0.1;  // Motor response model
-    // printf("Control Signal: %f , Motor Response: %f, current value: %f\n", control_signal,motor_response,current_value);    
+    printf("Control Signal: %f , Motor Response: %f, current value: %f\n", control_signal,motor_response,current_value);    
     // set boundary so that calculated signal will be within PWM range
     // if (control_signal >= 1.0f)
     // {
@@ -184,8 +184,9 @@ float compute_pid(float setpoint, float current_value, float *integral, float *p
 
 // both motors forward with PID
 void move_up(){
-    target_speed_motorA = 15.0f;
-    target_speed_motorB = 15.0f;
+    target_speed_motorA = 30.0f;
+    target_speed_motorB = 30.0f;
+    // printf("Left spd: %f, Right spd: %f\n", left_speed, right_speed);
     // get duty cycle based on PID
     float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, &integral_motorA, &previous_error_motorA, KpLeft, KiLeft, KdLeft);
     float duty_cycle_B = compute_pid(target_speed_motorB, right_speed, &integral_motorB,&previous_error_motorB, KpRight, KiRight, KdRight);

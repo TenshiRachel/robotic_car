@@ -19,8 +19,7 @@ include(example_auto_set_url.cmake)
 
 add_executable(robotic_car
 main.c
-components/ultrasonic/ultrasonic.c
-components/wheel_encoder/wheel_encoder.c
+components/ultrasonic_encoder/ultrasonic_encoder.c
 components/motor_control/motor_control.c
 components/ir_sensor/ir_sensor.c
 components/ir_sensor/ir_line_following.c
