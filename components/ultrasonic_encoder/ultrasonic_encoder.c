@@ -13,22 +13,20 @@
 #define MAX_RANGE 400.0f
 #define SOUND_SPEED 0.0343f
 #define TIMEOUT_US 26100
-#define SAFETY_THRESHOLD 20
-
+#define SAFETY_THRESHOLD 18
+// #define SAFETY_THRESHOLD 15
 absolute_time_t start, end;
 
 static float obstacle_distance = 0.0f;
 
-// john
 volatile bool blocked = false;  // Flag to enable/disable callback
 volatile bool turning = false; // track turning
+
 // Kalman filter variables
 static float estimate = 0.0f;
 static float uncertainty = 1.0f;
 const float Q = 0.01f;
-const float R = 0.5f;
-
-
+const float R = 0.1f;
 
 
 /* defines/static variables from wheel encoder are below */
@@ -41,20 +39,18 @@ const float R = 0.5f;
 #define TIMEOUT_MS 1000   // Timeout after 1 second to reset pulse widths
 #define NOTCHES_CM 1.025f // Circumference 21cm, 20 notches, therefore 1 notch approx 20.5/20cm
 
-// changed  to volatile for extern
 volatile uint32_t pulses_left = 0;
 volatile uint32_t pulses_right = 0;
-// john
 volatile float left_speed = 0;
 volatile float right_speed = 0;
-volatile uint32_t pulse_required = 0; // Global to store the target pulse count
+volatile uint32_t pulse_required = 0; // Global to store the target pulse count for turning
 
 
 static float pulse_width_left, pulse_width_right;
 static absolute_time_t last_time_left, last_time_right;
 static volatile float speed;
 static volatile float total_distance = 0.0f;
-
+float end_distance = 0.0f; // Station 1: to indicate end of 90cm mark
 
 
 void sendPulse(){
@@ -63,28 +59,19 @@ void sendPulse(){
     gpio_put(TRIG_PIN, 0);
 }
 
-float kalman_update(float distance){
-    uncertainty += Q;
-
-    float K = uncertainty / (uncertainty + R);
-
-    estimate = estimate + K * (distance - estimate);
-
-    uncertainty = (1 - K) * uncertainty;
-    
-    return estimate;
-}
-
 // from wheel encoder
 void set_speed_distance()
 {
     // Get average
-    total_distance += ((pulses_left + pulses_right) / 2) * NOTCHES_CM;
+    float dist_left = pulses_left * NOTCHES_CM;
+    float dist_right = pulses_right * NOTCHES_CM;
+    total_distance = ((dist_left + dist_right) / 2);
+    // printf("distance: %f, pulse left: %d, pulse right: %d \n", total_distance, pulses_left, pulses_right);
 
-    left_speed = (pulse_width_left > 0) ? NOTCHES_CM / pulse_width_left : 0;
-    right_speed = (pulse_width_right > 0) ? NOTCHES_CM / pulse_width_right : 0;
-    // printf("Speed left: %.2fcm/s\n", left_speed);
-    // printf("Speed right: %.2fcm/s\n", right_speed);
+    left_speed = (pulse_width_left > 0) ? (NOTCHES_CM / pulse_width_left) * 1000 : 0;
+    right_speed = (pulse_width_right > 0) ? (NOTCHES_CM / pulse_width_right) * 1000 : 0;
+    printf("Speed left: %.2fcm/s\n", left_speed);
+    printf("Speed right: %.2fcm/s\n", right_speed);
 
     speed = (left_speed + right_speed) / 2;
 }
@@ -92,51 +79,37 @@ void set_speed_distance()
 void shared_callback(uint gpio, uint32_t events){
     if (gpio == LEFT_ENCODER_PIN || gpio == RIGHT_ENCODER_PIN)
     {
-        absolute_time_t current_time = get_absolute_time();
+        volatile absolute_time_t current_time = get_absolute_time();
         if (gpio == LEFT_ENCODER_PIN)
         {
             pulses_left++;
-            int64_t time_diff = absolute_time_diff_us(last_time_left, current_time);
+            volatile int64_t time_diff_left = absolute_time_diff_us(last_time_left, current_time);
 
-            if (time_diff > TIMEOUT_MS * 1000)
+            if (time_diff_left > TIMEOUT_MS * 1000)
             {
                 pulse_width_left = 0.0f;
             }
             else
             {
-                pulse_width_left = (float)(time_diff / 1000000.0f); // Convert to seconds
+                pulse_width_left = (float)(time_diff_left / 1000.0f); // Convert to ms
                 // printf("Pulse width left: %f\n", pulse_width_left);
             }
             // printf("Pulses Left: %u\n", pulses_left);
 
             last_time_left = current_time;
-            // uint32_t pulse_required = 9;
-            // if (pulses_left >= pulse_required)
-            // {
-            //     stop_motors();
-            // }
-            if (blocked)
-            {
-                // uint32_t pulses_required = pulses_left + 9;
-                // if (pulses_left >= pulses_required)
-                // {
-                //     stop_motors();
-                //     // move_forward(0.55f, 0.5f);
-                // }
-            }
         }
         if (gpio == RIGHT_ENCODER_PIN)
         {
             pulses_right++;
-            int64_t time_diff = absolute_time_diff_us(last_time_right, current_time);
+            volatile int64_t time_diff_right = absolute_time_diff_us(last_time_right, current_time);
 
-            if (time_diff > TIMEOUT_MS * 1000)
+            if (time_diff_right > TIMEOUT_MS * 1000)
             {
                 pulse_width_right = 0.0f;
             }
             else
             {
-                pulse_width_right = (float)(time_diff / 1000000.0f);
+                pulse_width_right = (float)(time_diff_right / 1000.0f);
                 // printf("Pulse width right: %f\n", pulse_width_right);
             }
 
@@ -159,27 +132,30 @@ void shared_callback(uint gpio, uint32_t events){
         else{
             uint64_t pulse = absolute_time_diff_us(start, end);
             float raw_distance = pulse * SOUND_SPEED / 2;
-            obstacle_distance = kalman_update(raw_distance);
-            // printf("Distance to obstacle: %.2f\n", obstacle_distance);
+            obstacle_distance = raw_distance;
+            // obstacle_distance = kalman_update(raw_distance);
+            printf("Distance to obstacle: %.2f\n", obstacle_distance);
             if (obstacle_distance <= SAFETY_THRESHOLD && !blocked){
-                // stop_motors();
-                // sleep_ms(1000);
-                turn_right(0.6f,0.4f);
+                stop_motors();
+                turn_right(0.8f, 0.75f);
                 blocked = true;
-                // uint32_t pulses_required = pulses_left + 9;
-                pulse_required = pulses_left + 20;
+
+                pulse_required = pulses_left + 10; // 10 pulses to turn 90 deg angle
                 turning = true;
             }
                 // Check if we are turning and whether to stop
             if (turning && pulses_left >= pulse_required) {
                 stop_motors();
                 turning = false; // Reset the turning state
+                end_distance = total_distance + 90; // 90 cm to get expected final distance
             }
-
-
-            else if (obstacle_distance > SAFETY_THRESHOLD && blocked && !turning){
-                move_forward(0.6f,0.6f);
-                blocked = false;
+            else if (obstacle_distance > SAFETY_THRESHOLD && blocked && !turning) {
+                if (total_distance < end_distance) {
+                    move_up();
+                } else { // total distance > end_distance , then stop motor
+                    stop_motors();
+                    blocked = false;
+                }
             }
         }
     }

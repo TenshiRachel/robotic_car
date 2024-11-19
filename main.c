@@ -2,8 +2,7 @@
 #include "pico/stdlib.h"
 
 // Components
-#include "components/ultrasonic/ultrasonic.h"
-#include "components/wheel_encoder/wheel_encoder.h"
+#include "components/ultrasonic_encoder/ultrasonic_encoder.h"
 #include "components/motor_control/motor_control.h"
 #include "components/ir_sensor/ir_sensor.h"
 #include "components/ir_sensor/ir_line_following.h"
@@ -56,24 +55,29 @@ void irTask(__unused void *params) {
     }
 }
 
-
-void main_task(__unused void *params)
-{
-    
+// pid task
+void pidTask(__unused void *params) {
+    struct repeating_timer timer;
+    add_repeating_timer_ms(10, pid_timer_callback, NULL, &timer);
+    while (1)
+    {
+        vTaskDelay(portMAX_DELAY);
+    }
 }
+
 void vLaunch( void){
     // TaskHandle_t ultratask;
     // xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 5, &ultratask);
     InitMessageBuffer();
 
-    TaskHandle_t infraTask;
-    xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 2, &infraTask);
+    // TaskHandle_t infraTask;
+    // xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
 
-    TaskHandle_t infraBarCodeTask;
-    xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 2, &infraBarCodeTask);
+    // TaskHandle_t infraBarCodeTask;
+    // xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
 
-    TaskHandle_t task;
-    xTaskCreate(wifi_and_server_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &task);
+    TaskHandle_t pidUpdateTask;
+    xTaskCreate(pidTask, "pidThread", configMINIMAL_STACK_SIZE,NULL,3, &pidUpdateTask);
 
 #if NO_SYS && configUSE_CORE_AFFINITY && configNUM_CORES > 1
     // we must bind the main task to one core (well at least while the init is called)
@@ -92,12 +96,12 @@ int main(){
 
     // Init components
     // swapped wheel encoder and ultrasonic init!
-    // wheel_encoder_init();
-    // ultrasonic_init();
-
+    wheel_encoder_init();
+    ultrasonic_init();
+    
     motor_init();
-    ir_init_barcode();
-    ir_init_linefollow();
+    // ir_init_barcode();
+    // ir_init_linefollow();
 
     const char *rtos_name;
     #if ( portSUPPORT_SMP == 1 )
