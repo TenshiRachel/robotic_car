@@ -229,7 +229,7 @@ static void run_server()
     // Step 2: Bind the socket to the specified port and address
     struct sockaddr_in listen_addr = {
         .sin_family = AF_INET,
-        .sin_port = htons(8000),      // Port to listen on (1234)
+        .sin_port = htons(1234),      // Port to listen on (1234)
         .sin_addr.s_addr = INADDR_ANY // Listen on any available IP address
     };
 
