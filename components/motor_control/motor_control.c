@@ -166,7 +166,7 @@ float compute_pid(float setpoint, float current_value, float *integral, float *p
 
 
     float motor_response = control_signal * 0.1;  // Motor response model
-    printf("Control Signal: %f , Motor Response: %f, current value: %f\n", control_signal,motor_response,current_value);    
+    //printf("Control Signal: %f , Motor Response: %f, current value: %f\n", control_signal,motor_response,current_value);    
     // set boundary so that calculated signal will be within PWM range
     // if (control_signal >= 1.0f)
     // {

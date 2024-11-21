@@ -38,10 +38,12 @@
 #define BUF_SIZE 96
 
 #define MESSAGE "Message from Pico!"
-#define TARGET_IP "192.168.4.1" // Replace with the specific IP address of your computer (can be found using)
+#define TARGET_IP "192.168.4.3" // Replace with the specific IP address of your computer (can be found using)
 #define TARGET_PORT 8000          // Replace with the desired target port
 
+static struct sockaddr_in target_addr_dashboard;
 static struct sockaddr_in target_addr;
+
 static int sock;
 int conn_sock;
 int num_stas;
@@ -80,10 +82,12 @@ void send_data_task(__unused void *params)
         ReceiveFromMessageBuffer(sReceivedData, sizeof(sReceivedData), portMAX_DELAY);
 
         // Send the message to the target address
-        int result = sendto(sock, sReceivedData, strlen(sReceivedData), 0, (struct sockaddr *)&target_addr, sizeof(target_addr));
+        int result = sendto(sock, sReceivedData, strlen(sReceivedData), 0, (struct sockaddr *)&target_addr_dashboard, sizeof(target_addr_dashboard));
         if (result < 0)
         {
             printf("Failed to send message: error %d\n", errno);
+        } else {
+            printf("Sent message\n");
         }
     }
 
@@ -93,19 +97,21 @@ void send_data_task(__unused void *params)
 
 int create_socket()
 {
-    // Create a UDP socket
+    // Create a UDP socket for connecting to the dashboard pico
     sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock < 0)
     {
         printf("Failed to create socket: error %d\n", errno);
         return 0;
+    } else {
+        printf("Created outgoing socket number: %d\n", sock);
     }
 
     // Set up the destination address
-    memset(&target_addr, 0, sizeof(target_addr));
-    target_addr.sin_family = AF_INET;
-    target_addr.sin_port = htons(8000);
-    target_addr.sin_addr.s_addr = inet_addr(TARGET_IP);
+    memset(&target_addr_dashboard, 0, sizeof(target_addr_dashboard));
+    target_addr_dashboard.sin_family = AF_INET;
+    target_addr_dashboard.sin_port = htons(1234);
+    target_addr_dashboard.sin_addr.s_addr = inet_addr(TARGET_IP);
 
     return 1;
 }
@@ -123,7 +129,7 @@ static void run_server()
     // Step 2: Bind the socket to the specified port and address
     struct sockaddr_in listen_addr = {
         .sin_family = AF_INET,
-        .sin_port = htons(TARGET_PORT),      // Port to listen on
+        .sin_port = htons(TARGET_PORT),         // Port to listen on
         .sin_addr.s_addr = INADDR_ANY // Listen on any available IP address, on the pico the default is 192.168.4.1
     };
 
@@ -212,36 +218,39 @@ static void run_server()
 void wifi_and_server_task(__unused void *params)
 {
     if (cyw43_arch_init())
+    // if (cyw43_arch_init_with_country(CYW43_COUNTRY_SINGAPORE)) // tell the wifi chip its location - maybe can have better performance?
     {
         printf("failed to initialise\n");
         return;
     }
+    cyw43_wifi_pm(&cyw43_state, CYW43_PERFORMANCE_PM); // set wifi power management to performance mode
 
-    cyw43_arch_enable_sta_mode();
-    printf("Connecting to Wi-Fi...\n");
+    // cyw43_arch_enable_sta_mode();
+    // printf("Connecting to Wi-Fi...\n");
     // if (cyw43_arch_wifi_connect_timeout_ms("LAPTOP-4MHUFCI0", "5La43:30", CYW43_AUTH_WPA2_AES_PSK, 30000))
 
-    if (cyw43_arch_wifi_connect_timeout_ms("picow_p5a", "password", CYW43_AUTH_WPA2_AES_PSK, 30000))
-    {
-        printf("failed to connect.\n");
-        exit(1);
-    }
-    else
-    {
-        printf("Connected.\n");
-    }
+    // //if (cyw43_arch_wifi_connect_timeout_ms("picow_p5a", "password", CYW43_AUTH_WPA2_AES_PSK, 30000))
+    // {
+    //     printf("failed to connect.\n");
+    //     exit(1);
+    // }
+    // else
+    // {
+    //     printf("Connected.\n");
+    // }
 
-//     const char *ap_name = "picow_p5a";
-// #if 1
-//     const char *password = "password";
-// #else
-//     const char *password = NULL;
-// #endif
-    //cyw43_arch_enable_ap_mode(ap_name, password, CYW43_AUTH_WPA2_AES_PSK); // use the pico as a wifi access point
-
+    const char *ap_name = "picow_p5a";
+#if 1
+    const char *password = "password";
+#else
+    const char *password = NULL;
+#endif
+    cyw43_wifi_ap_set_channel(&cyw43_state, 1);                            // use wifi channel 1 for hopefully better performance
+    cyw43_arch_enable_ap_mode(ap_name, password, CYW43_AUTH_WPA2_AES_PSK); // use the pico as a wifi access point
+    printf("Using channel %d\n", cyw43_state.ap_channel);
     // TaskHandle_t broadcast_task;
     // xTaskCreate(broadcastTask, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, &broadcast_task);
-    
+
     TaskHandle_t telemetry_task;
     xTaskCreate(send_data_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &telemetry_task);
 

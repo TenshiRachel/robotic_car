@@ -73,9 +73,11 @@ void vLaunch( void){
     // TaskHandle_t infraTask;
     // xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
 
-    // TaskHandle_t infraBarCodeTask;
-    // xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
-
+    TaskHandle_t infraBarCodeTask;
+    xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
+    TaskHandle_t task;
+    xTaskCreate(wifi_and_server_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &task);
+    
     TaskHandle_t pidUpdateTask;
     xTaskCreate(pidTask, "pidThread", configMINIMAL_STACK_SIZE,NULL,3, &pidUpdateTask);
 
@@ -100,7 +102,7 @@ int main(){
     ultrasonic_init();
     
     motor_init();
-    // ir_init_barcode();
+    ir_init_barcode();
     // ir_init_linefollow();
 
     const char *rtos_name;
@@ -110,7 +112,9 @@ int main(){
     rtos_name = "FreeRTOS";
 #endif
 
-#if ( portSUPPORT_SMP == 1 ) && ( configNUM_CORES == 2 )
+#if ( configNUM_CORES == 2 )
+
+    sleep_ms(3000);
     printf("Starting %s on both cores:\n", rtos_name);
     vLaunch();
 #elif ( RUN_FREERTOS_ON_CORE == 1 )
