@@ -71,11 +71,12 @@ static uint32_t running_total = 0;
 
 void classify_timings(int8_t *timings_index, uint32_t *timings, char *classified_string);
 characterValue check_character(char *classified_string, bool reverse_flag);
-characterValue check_asterisk(char *classified_string, bool read_flag, bool end_flag, bool *reverse_flag);
+characterValue check_asterisk(char *classified_string, bool read_flag, bool *reverse_flag);
 int get_colour(uint32_t result);
 bool process_barcode(__unused struct repeating_timer *t);
 
-void ir_init_barcode(){
+void ir_init_barcode()
+{
     adc_init();
     adc_gpio_init(GPIO_PIN); // set pin as the gpio adc input
     
@@ -96,8 +97,6 @@ bool process_barcode(struct repeating_timer *t)
 
     static absolute_time_t startTime;
     static int8_t timings_index = 0;
-    static uint32_t timings[BARCODE_SIZE] = {0}; // in milliseconds
-    static char classified_string[BARCODE_SIZE] = {0}; // binary string
 
     static uint32_t timings_full[FULL_BARCODE_SIZE] = {0}; // in milliseconds
     static char classified_string_full[FULL_BARCODE_SIZE] = {0}; // binary string
@@ -109,7 +108,8 @@ bool process_barcode(struct repeating_timer *t)
     char message[64] = {0};
 
     static bool first_call = true;
-    if (first_call) {
+    if (first_call)
+    {
         startTime = get_absolute_time();
         first_call = false;
     }
@@ -117,7 +117,8 @@ bool process_barcode(struct repeating_timer *t)
     // printf("ADC: %u\n", result); // Use %u for uint32_t
     current_colour = get_colour(result);
     // current_colour = gpio_get(27);
-    if (current_colour != colour) {
+    if (current_colour != colour)
+    {
         // Calculate the pulse duration
         absolute_time_t endTime = get_absolute_time();
         uint64_t pulseDuration = absolute_time_diff_us(startTime, endTime);
@@ -169,7 +170,7 @@ bool process_barcode(struct repeating_timer *t)
             }
 
             // Check asterisk first
-            value = check_asterisk(classified_string_full, read_flag, end_flag, &reverse_flag);
+            value = check_asterisk(classified_string_full, read_flag, &reverse_flag);
             if (!value.success)
             {
                 // printf("First asterisk fail\n");
@@ -188,7 +189,7 @@ bool process_barcode(struct repeating_timer *t)
             read_flag = true;
 
             // Check for end asterisk
-            value = check_asterisk(&classified_string_full[20], read_flag, end_flag, &reverse_flag);
+            value = check_asterisk(&classified_string_full[20], read_flag, &reverse_flag);
             if (!value.success)
             {
                 // printf("End asterisk fail\n");
@@ -202,157 +203,12 @@ bool process_barcode(struct repeating_timer *t)
             reverse_flag = false;
             return true;
         }
-        return true;
     }
-    // }
-    // if (current_colour != colour) {
-    //     // Calculate the pulse duration
-    //     absolute_time_t endTime = get_absolute_time();
-    //     uint64_t pulseDuration = absolute_time_diff_us(startTime, endTime);
-    //     startTime = get_absolute_time();
-    //     uint32_t timing_ms = pulseDuration / 1000;
-    //     colour = current_colour;
-
-    //     // Skip if too long or too short
-    //     if (timing_ms > 3000 || timing_ms < 5)
-    //     {
-    //         return true;
-    //     }
-
-    //     // if (current_colour == WHITE) {
-    //     //     printf("Black Duration: %u ms\n", timing_ms);
-    //     // } else {
-    //     //     printf("White Duration: %u ms\n", timing_ms);
-    //     // }
-        
-    //     // Update timing in circular array
-    //     timings[timings_index] = pulseDuration / 1000; 
-    //     timings_index = (timings_index + 1) % BARCODE_SIZE; // Increment index in circular array
-    //     if (num_existing_timings < 9)
-    //     {
-    //         num_existing_timings++;
-    //     }
-
-    //     // If there are already 9 characters
-    //     if (num_existing_timings == BARCODE_SIZE)
-    //     {
-    //         // Classify the timings into a binary string of 9 values
-    //         classify_timings(&timings_index, timings, classified_string);
-
-    //         // Print classified string
-    //         // for (int i = 0; i < BARCODE_SIZE; i++) {
-    //         //     printf("%c", classified_string[i]);
-    //         // }
-    //         // printf("\n");
-
-    //         characterValue value;
-
-    //         // If already read but hasn't ended, check for character
-    //         if (!read_flag)
-    //         {
-    //             value = check_asterisk(classified_string, read_flag, end_flag, &reverse_flag);
-
-    //             // if successful, move on to read the actual character
-    //             if (value.success)
-    //             {
-    //                 read_flag = true; // set flag to read the character
-    //                 gap_flag = true; // set flag to skip the gap pulse
-    //                 printf("Found start * successfully!\n");
-    //                 char msg[] = "Found start * successfully!\n";
-    //                 SendToMessageBuffer(msg, sizeof(msg), 0);
-    //                 // reset array to no timings
-    //                 num_existing_timings = 0;
-    //             }
-    //             // if not successful, let the circular array continue searching for asterisk
-    //         }
-
-    //         // Else if initial * has been read, it's either reading character or end *
-    //         else
-    //         {
-    //             // skip gap pulse before or after a character
-    //             if (gap_flag)
-    //             {
-    //                 gap_flag = false;
-    //                 // printf("Skip gap pulse!\n");
-    //                 return true;
-    //             }
-                
-    //             // If end flag not set, read character
-    //             if (!end_flag)
-    //             {
-    //                 // Read the character
-    //                 value = check_character(classified_string, reverse_flag);
-                    
-    //                 // If successful in reading, set flags to read end
-    //                 if (value.success)
-    //                 {
-    //                     end_flag = true; // signal to go detect for end character
-    //                     gap_flag = true; // set flag to skip the gap pulse
-    //                     character_read = value.character;
-    //                     printf("Read a character %c! Now listening for end *.\n", character_read);
-
-    //                     snprintf(message, sizeof(message), "Read a character %c! Now listening for end *.\n", character_read);
-    //                     SendToMessageBuffer(message, sizeof(message), 0);
-    //                 }
-    //                 else // RESET EVERYTHING
-    //                 {
-    //                     char msg[] = "Invalid character. Resetting all\n";
-    //                     SendToMessageBuffer(msg, sizeof(msg), 0);
-    //                     printf("Invalid character. Resetting all\n");
-    //                     read_flag = end_flag = gap_flag = reverse_flag = false;
-    //                 }
-    //                 num_existing_timings = 0;
-    //             }
-
-    //             // read end asterisk
-    //             else
-    //             {
-    //                 value = check_asterisk(classified_string, read_flag, end_flag, &reverse_flag);
-    //                 if (value.success)
-    //                 {
-    //                     snprintf(message, sizeof(message), "Successfully read character %c! Resetting to listen for start *.\n", character_read);
-    //                     SendToMessageBuffer(message, sizeof(message), 0);
-    //                     printf("Successfully read character %c! Resetting to listen for start *.\n", character_read);
-    //                 }
-    //                 else
-    //             {
-    //                 printf("Failed reading end asterisk. Resetting everything.\n");
-    //             }
-    //                 // Whether success/fail, reset flags and continue listening for start asterisk
-    //                 read_flag = end_flag = gap_flag = reverse_flag = false;
-    //             }
-
-    //         }
-    //     }
-    // }
     return true;
 }
 
 void classify_timings(int8_t *timings_index, uint32_t *timings, char *classified_string)
 {
-    // // Calculate average of existing timings
-    // uint32_t sum = 0;
-    // for (int i = 0; i < BARCODE_SIZE; i++)
-    // {
-    //     sum += timings[i];
-    // }
-
-    // uint32_t average = sum / BARCODE_SIZE;
-
-
-    // for (int i = 0; i < BARCODE_SIZE; i++)
-    // {
-    //     int index = (*timings_index + i) % BARCODE_SIZE;
-    //     if (timings[index] > average)
-    //     {
-    //         classified_string[i] = '1';
-    //     }
-    //     else
-    //     {
-    //         classified_string[i] = '0';
-    //     }
-    // }
-
     uint32_t average = running_total / FULL_BARCODE_SIZE;
     for (int i = 0; i < FULL_BARCODE_SIZE; i++)
     {
@@ -405,7 +261,7 @@ characterValue check_character(char *classified_string, bool reverse_flag)
     return result;
 }
 
-characterValue check_asterisk(char *classified_string, bool read_flag, bool end_flag, bool *reverse_flag)
+characterValue check_asterisk(char *classified_string, bool read_flag, bool *reverse_flag)
 {
     characterValue result;
     result.success = false;
