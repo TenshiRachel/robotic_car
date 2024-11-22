@@ -290,7 +290,7 @@ void connect_wifi()
     {
         led_blink_state = 1;
         printf("Connecting wifi\n");
-        if (cyw43_arch_wifi_connect_timeout_ms("picow_p5a", "password", CYW43_AUTH_WPA2_AES_PSK, 20000))
+        if (cyw43_arch_wifi_connect_timeout_ms("Matt", "whyyoustealingmydata", CYW43_AUTH_WPA2_AES_PSK, 20000))
         {
             printf("failed to connect.\n");
         }

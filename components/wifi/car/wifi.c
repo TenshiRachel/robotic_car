@@ -23,6 +23,7 @@
 #include <lwip/sockets.h>
 #include "lwipopts.h"
 #include "wifi.h"
+#include "components/motor_control/motor_control.h"
 
 #ifndef PING_ADDR
 #define PING_ADDR "192.168.137.1"
@@ -35,7 +36,7 @@
 #define TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 1UL)
 #define mbaTASK_MESSAGE_BUFFER_SIZE (192) // message buffer size, increase as needed based on individual message size
 
-#define BUF_SIZE 96
+#define BUF_SIZE 4
 
 #define MESSAGE "Message from Pico!"
 #define TARGET_IP "192.168.4.3" // Replace with the specific IP address of your computer (can be found using)
@@ -169,6 +170,9 @@ static void run_server()
         // Step 7: Process received data (e.g., print it)
         printf("Message: %s\n", buffer);
 
+        // printf("Buffer [0] %c\n", buffer[0]);
+        process_command_with_speed(buffer[0]-'0'); 
+
         // Initialize the start time for measuring execution time
         //absolute_time_t start_time = get_absolute_time();
 
@@ -185,29 +189,29 @@ static void run_server()
         // {
 
         // Generate a random message to be sent back to client
-        char randNum = 26 * (rand() / (RAND_MAX + 1.0)) + 97;
-        char a[] = "Hello ";
-        char b[11] = {0};
-        char c[4] = {randNum, '\r', '\n', '\0'};
+        // char randNum = 26 * (rand() / (RAND_MAX + 1.0)) + 97;
+        // char a[] = "Hello ";
+        // char b[11] = {0};
+        // char c[4] = {randNum, '\r', '\n', '\0'};
 
-        strcat(b, a);
-        strcat(b, c);
+        // strcat(b, a);
+        // strcat(b, c);
 
-        printf("Message sent: %s", b);
-        // Measure end time for execution timing
-        //absolute_time_t end_time = get_absolute_time();
-        //uint32_t execution_time_before = absolute_time_diff_us(start_time, end_time);
+        // printf("Message sent: %s", b);
+        // // Measure end time for execution timing
+        // //absolute_time_t end_time = get_absolute_time();
+        // //uint32_t execution_time_before = absolute_time_diff_us(start_time, end_time);
 
-        // Output execution time
-        //printf("Execution Time: %d microseconds\n", execution_time_before);
+        // // Output execution time
+        // //printf("Execution Time: %d microseconds\n", execution_time_before);
 
-        // send the random message back
-        int sent_bytes = sendto(conn_sock, b, strlen(b), 0,
-                                (struct sockaddr *)&remote_addr, addr_len);
-        if (sent_bytes < 0)
-        {
-            printf("Error sending response: %d\n", errno);
-        }
+        // // send the random message back
+        // int sent_bytes = sendto(conn_sock, b, strlen(b), 0,
+        //                         (struct sockaddr *)&remote_addr, addr_len);
+        // if (sent_bytes < 0)
+        // {
+        //     printf("Error sending response: %d\n", errno);
+        // }
         // }
     }
 
@@ -226,19 +230,19 @@ void wifi_and_server_task(__unused void *params)
     }
     cyw43_wifi_pm(&cyw43_state, CYW43_PERFORMANCE_PM); // set wifi power management to performance mode
 
-    // cyw43_arch_enable_sta_mode();
-    // printf("Connecting to Wi-Fi...\n");
-    // if (cyw43_arch_wifi_connect_timeout_ms("LAPTOP-4MHUFCI0", "5La43:30", CYW43_AUTH_WPA2_AES_PSK, 30000))
+    cyw43_arch_enable_sta_mode();
+    printf("Connecting to Wi-Fi...\n");
+    if (cyw43_arch_wifi_connect_timeout_ms("Matt", "whyyoustealingmydata", CYW43_AUTH_WPA2_AES_PSK, 30000))
 
-    // //if (cyw43_arch_wifi_connect_timeout_ms("picow_p5a", "password", CYW43_AUTH_WPA2_AES_PSK, 30000))
-    // {
-    //     printf("failed to connect.\n");
-    //     exit(1);
-    // }
-    // else
-    // {
-    //     printf("Connected.\n");
-    // }
+    //if (cyw43_arch_wifi_connect_timeout_ms("picow_p5a", "password", CYW43_AUTH_WPA2_AES_PSK, 30000))
+    {
+        printf("failed to connect.\n");
+        exit(1);
+    }
+    else
+    {
+        printf("Connected.\n");
+    }
 
     const char *ap_name = "picow_p5a";
 #if 1
@@ -246,9 +250,9 @@ void wifi_and_server_task(__unused void *params)
 #else
     const char *password = NULL;
 #endif
-    cyw43_wifi_ap_set_channel(&cyw43_state, 1);                            // use wifi channel 1 for hopefully better performance
-    cyw43_arch_enable_ap_mode(ap_name, password, CYW43_AUTH_WPA2_AES_PSK); // use the pico as a wifi access point
-    printf("Using channel %d\n", cyw43_state.ap_channel);
+    // cyw43_wifi_ap_set_channel(&cyw43_state, 1);                            // use wifi channel 1 for hopefully better performance
+    // cyw43_arch_enable_ap_mode(ap_name, password, CYW43_AUTH_WPA2_AES_PSK); // use the pico as a wifi access point
+    // printf("Using channel %d\n", cyw43_state.ap_channel);
     // TaskHandle_t broadcast_task;
     // xTaskCreate(broadcastTask, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, &broadcast_task);
 

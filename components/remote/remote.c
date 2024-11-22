@@ -42,11 +42,11 @@
 #define DIRECTION_CHANGE_THRESHOLD 5.0 
 
 // Minimum Y-axis tilt to trigger forward movement
-#define FORWARD_THRESHOLD 1.5
+#define FORWARD_THRESHOLD 4
 // Minimum Y-axis tilt to trigger backward movement         
-#define BACKWARD_THRESHOLD -1.5     
+#define BACKWARD_THRESHOLD -4     
 // Minimum X-axis tilt to trigger left/right turn  
-#define TURN_THRESHOLD 2
+#define TURN_THRESHOLD 3
 // Minimum value to trigger stop       
 #define STOP_THRESHOLD 10          
 
@@ -55,6 +55,12 @@
 
 // Maximum tilt angle
 #define MAX_TILT_ANGLE 170
+
+#define FORWARD_STATE 0
+#define BACKWARD_STATE 1
+#define LEFT_STATE 3
+#define RIGHT_STATE 2
+#define STOP_STATE 4
 
 // Initialize complementary filter parameters
 float alpha = 0.95;
@@ -129,109 +135,66 @@ void get_moving_average_mag(float* avg_x, float* avg_y, float* avg_z) {
 }
 
 // Function to determine speed level based on Y-axis tilt
-int calculate_speed_level(int16_t accel_y) {
-    static int last_speed = 0;  // Static variable to store the previous speed between calls
-    float max_forward_accel = 5;
+// int calculate_speed_level(int16_t accel_y) {
+//     static int last_speed = 0;  // Static variable to store the previous speed between calls
+//     float max_forward_accel = 5;
 
-    float tilt_angle = (fabs(accel_y) / max_forward_accel) * 100;
+//     float tilt_angle = (fabs(accel_y) / max_forward_accel) * 100;
 
-    if (tilt_angle > MAX_TILT_ANGLE) {
-        tilt_angle = MAX_TILT_ANGLE;
-    }
+//     if (tilt_angle > MAX_TILT_ANGLE) {
+//         tilt_angle = MAX_TILT_ANGLE;
+//     }
 
-    int speed = (int)((tilt_angle / MAX_TILT_ANGLE) * 100);
+//     int speed = (int)((tilt_angle / MAX_TILT_ANGLE) * 100);
 
-    if (abs(speed - last_speed) > HYSTERESIS) {
-        last_speed = speed;
-    }
+//     if (abs(speed - last_speed) > HYSTERESIS) {
+//         last_speed = speed;
+//     }
 
-    return last_speed;
-}
+//     return last_speed;
+// }
 
-// Function to determine turn level based on X-axis tilt
-int calculate_turn_level(int16_t accel_x) {
-    static int last_turn_speed = 0;  // Static variable to store the previous turn speed between calls
-    float max_turn_accel = 8;
+// // Function to determine turn level based on X-axis tilt
+// int calculate_turn_level(int16_t accel_x) {
+//     static int last_turn_speed = 0;  // Static variable to store the previous turn speed between calls
+//     float max_turn_accel = 8;
 
-    float tilt_angle = (fabs(accel_x) / max_turn_accel) * 100;
+//     float tilt_angle = (fabs(accel_x) / max_turn_accel) * 100;
 
-    if (tilt_angle > 100) {
-        tilt_angle = 100;
-    }
+//     if (tilt_angle > 100) {
+//         tilt_angle = 100;
+//     }
 
-    int turn_speed = (int)tilt_angle;
+//     int turn_speed = (int)tilt_angle;
 
-    if (abs(turn_speed - last_turn_speed) > HYSTERESIS) {
-        last_turn_speed = turn_speed;
-    }
+//     if (abs(turn_speed - last_turn_speed) > HYSTERESIS) {
+//         last_turn_speed = turn_speed;
+//     }
 
-    return last_turn_speed;
-}
+//     return last_turn_speed;
+// }
 
 // Function to generate commands based on the calculated speed and turn levels
 void generate_command(int16_t accel_x, int16_t accel_y) {
-    int speed = 0;
-    int direction = 0;        
-    int turn_speed = 0;
-    int turn_direction = 0;  
+    int direction = STOP_STATE;  // Default to stop
 
-    // Determine forward/backward level based on Y-axis tilt
     if (accel_y > FORWARD_THRESHOLD) {
-        speed = calculate_speed_level(accel_y);
-        direction = 1;  // Forward
+        direction = FORWARD_STATE;  
     } else if (accel_y < BACKWARD_THRESHOLD) {
-        speed = calculate_speed_level(accel_y);
-        direction = -1;  // Backward
-    } else if (fabs(accel_y) < STOP_THRESHOLD) {
-        speed = 0;
-        direction = 0;
-    }
-
-    // Determine left/right level based on X-axis tilt
-    if (accel_x > TURN_THRESHOLD) {
-        turn_speed = calculate_turn_level(accel_x);
-        turn_direction = 1;  // Right
+        direction = BACKWARD_STATE; 
+    } else if (accel_x > TURN_THRESHOLD) {
+        direction = RIGHT_STATE;  
     } else if (accel_x < -TURN_THRESHOLD) {
-        turn_speed = calculate_turn_level(accel_x);
-        turn_direction = -1; // Left
-    } else if (fabs(accel_x) < STOP_THRESHOLD) {
-        turn_speed = 0;
-        turn_direction = 0;
+        direction = LEFT_STATE; 
     }
 
-    bool command_changed = false;
+    // Check if direction has changed
+    if (direction != last_direction) {
+        snprintf(command_buffer, COMMAND_BUFFER_SIZE, "%d", direction);
+        printf("Command: %d\n", direction);
 
-    // Only issue a command if speed or direction changes
-    if (speed != last_speed || direction != last_direction) {
-        if (speed > 0) {
-            // printf("Command: %s at %d%% speed\n", direction == 1 ? "Forward" : "Backward", speed);
-            snprintf(command_buffer, COMMAND_BUFFER_SIZE, "%s at %d%% speed", (direction == 1 ? "Forward" : "Backward"), speed);
-        } else {
-            // printf("Command: Stop\n");
-            snprintf(command_buffer, COMMAND_BUFFER_SIZE, "Stop");
-        }
-        last_speed = speed;
-        last_direction = direction;
-        command_changed = true;
-    }
-
-    // Only issue a command if turn speed or direction changes
-    if (turn_speed != last_turn_speed || turn_direction != last_turn_direction) {
-        if (turn_speed > 0) {
-            // printf("Command: Turn %s at %d%% speed\n", turn_direction == 1 ? "right" : "left", turn_speed);
-            snprintf(command_buffer, COMMAND_BUFFER_SIZE, "Turn %s at %d%% speed", (turn_direction == 1 ? "right" : "left"), turn_speed);
-        } else {
-            //printf("Command: Stop turning\n");
-            snprintf(command_buffer, COMMAND_BUFFER_SIZE, "Stop turning");
-        }
-        last_turn_speed = turn_speed;
-        last_turn_direction = turn_direction;
-        command_changed = true;
-    }
-
-    // Set the flag to indicate that a new command is available
-    if (command_changed) {
-        command_ready = true;
+        last_direction = direction;  // Update the last known direction
+        command_ready = true;  // Indicate that a new command is ready
     }
 }
 

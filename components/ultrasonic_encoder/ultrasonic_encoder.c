@@ -70,8 +70,8 @@ void set_speed_distance()
 
     left_speed = (pulse_width_left > 0) ? (NOTCHES_CM / pulse_width_left) * 1000 : 0;
     right_speed = (pulse_width_right > 0) ? (NOTCHES_CM / pulse_width_right) * 1000 : 0;
-    printf("Speed left: %.2fcm/s\n", left_speed);
-    printf("Speed right: %.2fcm/s\n", right_speed);
+    // printf("Speed left: %.2fcm/s\n", left_speed);
+    // printf("Speed right: %.2fcm/s\n", right_speed);
 
     speed = (left_speed + right_speed) / 2;
 }
@@ -137,25 +137,11 @@ void shared_callback(uint gpio, uint32_t events){
             printf("Distance to obstacle: %.2f\n", obstacle_distance);
             if (obstacle_distance <= SAFETY_THRESHOLD && !blocked){
                 stop_motors();
-                turn_right(0.8f, 0.75f);
                 blocked = true;
+            }
 
-                pulse_required = pulses_left + 10; // 10 pulses to turn 90 deg angle
-                turning = true;
-            }
-                // Check if we are turning and whether to stop
-            if (turning && pulses_left >= pulse_required) {
-                stop_motors();
-                turning = false; // Reset the turning state
-                end_distance = total_distance + 90; // 90 cm to get expected final distance
-            }
-            else if (obstacle_distance > SAFETY_THRESHOLD && blocked && !turning) {
-                if (total_distance < end_distance) {
-                    move_up();
-                } else { // total distance > end_distance , then stop motor
-                    stop_motors();
-                    blocked = false;
-                }
+            else if (obstacle_distance > SAFETY_THRESHOLD && blocked){
+                blocked = false;
             }
         }
     }

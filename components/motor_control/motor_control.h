@@ -10,7 +10,7 @@ void turn_right(float duty_cycle_A, float duty_cycle_B);
 void turn_left(float duty_cycle_A, float duty_cycle_B);
 bool pid_timer_callback();
 extern volatile bool is_moving;
-
+void process_command_with_speed(const int command);
 
 
 #endif

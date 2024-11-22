@@ -66,8 +66,8 @@ void pidTask(__unused void *params) {
 }
 
 void vLaunch( void){
-    // TaskHandle_t ultratask;
-    // xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 5, &ultratask);
+    TaskHandle_t ultratask;
+    xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 5, &ultratask);
     InitMessageBuffer();
 
     // TaskHandle_t infraTask;
