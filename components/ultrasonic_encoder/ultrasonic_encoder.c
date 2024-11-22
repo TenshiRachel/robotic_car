@@ -134,7 +134,7 @@ void shared_callback(uint gpio, uint32_t events){
             float raw_distance = pulse * SOUND_SPEED / 2;
             obstacle_distance = raw_distance;
             // obstacle_distance = kalman_update(raw_distance);
-            printf("Distance to obstacle: %.2f\n", obstacle_distance);
+            // printf("Distance to obstacle: %.2f\n", obstacle_distance);
             if (obstacle_distance <= SAFETY_THRESHOLD && !blocked){
                 stop_motors();
                 blocked = true;

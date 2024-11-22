@@ -222,6 +222,7 @@ static void run_server()
 // wifi_and_server_task updated to use AP mode
 void wifi_and_server_task(__unused void *params)
 {
+    printf("init wifi");
     if (cyw43_arch_init())
     // if (cyw43_arch_init_with_country(CYW43_COUNTRY_SINGAPORE)) // tell the wifi chip its location - maybe can have better performance?
     {
@@ -241,6 +242,8 @@ void wifi_and_server_task(__unused void *params)
     }
     else
     {
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+
         printf("Connected.\n");
     }
 

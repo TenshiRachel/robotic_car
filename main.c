@@ -6,6 +6,7 @@
 #include "components/motor_control/motor_control.h"
 #include "components/ir_sensor/ir_sensor.h"
 #include "components/ir_sensor/ir_line_following.h"
+#include "pico/cyw43_arch.h"
 
 // Lib
 // #include "FreeRTOS.h"
@@ -16,6 +17,9 @@
 #define BLACK 1
 #define ON_LINE 2
 #define mbaTASK_MESSAGE_BUFFER_SIZE (80) // message buffer size, increase as needed based on individual message size
+
+static bool autonomous = false;
+static int line_ir_poll_interval = 100;
 
 void ultrasonicTask(__unused void *params){
     // Ultrasonic
@@ -43,17 +47,25 @@ void irTask(__unused void *params) {
         int line_state = read_line();  // Read sensor data every 10 ms
         if (!blocked) {
             // Control motors based on line state if needed
-            if (line_state == WHITE) {
-                turn_left(0.0f,0.5f);
+            if (line_state == WHITE && autonomous) {
+                    // turn_left(0.0f,0.22f);
+                    turn_right(0.22f,0.0f);
             } else if (line_state == BLACK) {
+                    if(!autonomous) {
+                        autonomous = true;
+                        line_ir_poll_interval = 500;
+                    } else {
+                        // move_forward(0.48f,0.18f);
+                        move_forward(0.38f,0.48f);
+
+                    }
+                }
                 // turn_right(0.5f,0.7f);
-                move_forward(0.55f,0.5f);
+                // move_forward(0.55f,0.5f);
             }
         }
-        
-        vTaskDelay(pdMS_TO_TICKS(10));  // Delay ?? ms between readings
+        vTaskDelay(pdMS_TO_TICKS(line_ir_poll_interval));  // Delay ?? ms between readings
     }
-}
 
 // pid task
 void pidTask(__unused void *params) {
@@ -70,13 +82,13 @@ void vLaunch( void){
     xTaskCreate(ultrasonicTask, "ultrasonicThread", configMINIMAL_STACK_SIZE, NULL, 5, &ultratask);
     InitMessageBuffer();
 
-    // TaskHandle_t infraTask;
-    // xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
+    TaskHandle_t infraTask;
+    xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
 
     TaskHandle_t infraBarCodeTask;
     xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
     TaskHandle_t task;
-    xTaskCreate(wifi_and_server_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &task);
+    xTaskCreate(wifi_and_server_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 3, &task);
     
     TaskHandle_t pidUpdateTask;
     xTaskCreate(pidTask, "pidThread", configMINIMAL_STACK_SIZE,NULL,3, &pidUpdateTask);
@@ -103,7 +115,7 @@ int main(){
     
     motor_init();
     ir_init_barcode();
-    // ir_init_linefollow();
+    ir_init_linefollow();
 
     const char *rtos_name;
     #if ( portSUPPORT_SMP == 1 )
