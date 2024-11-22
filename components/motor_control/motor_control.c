@@ -239,34 +239,34 @@ void motor_init(){
 
 void process_command_with_speed(const int command) {
 
-    printf("Command: %d\n", command);
+    // printf("Command: %d\n", command);
         switch (command) {
             case 0:  // Forward
-                printf("Forward\n");
+                // printf("Forward\n");
                 stop_motors();
                 move_forward(0.275f, 0.275f);  
                 break;
 
             case 1:  // Backward
-                printf("Backward\n");
+                // printf("Backward\n");
                 stop_motors();
                 move_backward(0.275f, 0.275f);  
                 break;
 
             case 2:  // Turn Right
-                printf("Right\n");
+                // printf("Right\n");
                 stop_motors();
                 turn_right(0.275f, 0.2f);  
                 break;
 
             case 3:  // Turn Left
-                printf("Left\n");
+                // printf("Left\n");
                 stop_motors();
                 turn_left(0.28f, 0.15f);  
                 break;
 
             case 4: // Stop car
-                printf("Stop\n");
+                // printf("Stop\n");
                 stop_motors();
                 break;
 
