@@ -215,6 +215,7 @@ static void run_server()
     close(conn_sock);
 }
 
+// wifi_and_server_task updated to use AP mode
 void wifi_and_server_task(__unused void *params)
 {
     if (cyw43_arch_init())
