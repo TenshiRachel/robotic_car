@@ -191,7 +191,7 @@ void generate_command(int16_t accel_x, int16_t accel_y) {
     // Check if direction has changed
     if (direction != last_direction) {
         snprintf(command_buffer, COMMAND_BUFFER_SIZE, "%d", direction);
-        printf("Command: %d\n", direction);
+        // printf("Command: %d\n", direction);
 
         last_direction = direction;  // Update the last known direction
         command_ready = true;  // Indicate that a new command is ready
