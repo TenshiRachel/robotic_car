@@ -19,7 +19,7 @@
 #define mbaTASK_MESSAGE_BUFFER_SIZE (80) // message buffer size, increase as needed based on individual message size
 
 static bool autonomous = false;
-static int line_ir_poll_interval = 100;
+volatile int line_ir_poll_interval = 100;
 
 void ultrasonicTask(__unused void *params){
     // Ultrasonic
