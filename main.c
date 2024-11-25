@@ -44,32 +44,38 @@ void irBarcodeTask(__unused void *params){
 }
 
 void irTask(__unused void *params) {
-    static bool readjustment = false;
+    // static bool readjustment = false;
     static int16_t white_counter = 0;
     while (1) {
         int line_state = read_line();  // Read sensor data
         if (!blocked) {
             // Control motors based on line state if needed
             if (line_state == WHITE && autonomous) {
+                turn_right(0.22f, 0.0f);
                 white_counter++;
-                if (white_counter >= 1000)
+                if (white_counter >= 20)
                 {
-                    readjustment = true;
-                    turn_left(0.0f, 0.22f);
-                } else if (white_counter >= 200)
-                {
-                    // turn_left(0.0f,0.22f);
                     turn_right(0.22f,0.0f);
                 }
+                else {
+                    move_forward(0.32f, 0.32f);
+                }
+                // if (white_counter >= 1000)
+                // {
+                //     readjustment = true;
+                //     turn_left(0.0f, 0.32f);
+                // } else if (white_counter >= 200)
+                // {
+                //     // turn_left(0.0f,0.22f);
+                //     turn_right(0.22f,0.0f);
+                // }
             } else if (line_state == BLACK) {
                 white_counter = 0;
-                readjustment = false;
                 if(!autonomous) {
                     autonomous = true;
-                    line_ir_poll_interval = 500;
                 } else {
                     // move_forward(0.48f,0.18f);
-                    move_forward(0.38f,0.48f);
+                    move_forward(0.32f,0.42f);
                 }
             }
                 // turn_right(0.5f,0.7f);
@@ -80,7 +86,7 @@ void irTask(__unused void *params) {
             xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
             barcodeTaskLaunched = true;
         }
-        vTaskDelay(pdMS_TO_TICKS(1));  // Delay 1 ms between readings
+        vTaskDelay(pdMS_TO_TICKS(10));  // Delay 1 ms between readings
     }
 }
 

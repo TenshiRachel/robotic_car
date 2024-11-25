@@ -170,8 +170,8 @@ bool process_barcode(struct repeating_timer *t)
             if (!(classified_string_full[9] == '0') || !(classified_string_full[19] == '0'))
             {
                 // printf("Gap values not thin lines\n");
-                snprintf(message, sizeof(message), "Gap values not thin lines!\n", character_read);
-                SendToMessageBuffer(message, sizeof(message), 0);
+                // snprintf(message, sizeof(message), "Gap values not thin lines!\n", character_read);
+                // SendToMessageBuffer(message, sizeof(message), 0);
                 return true;
             }
 
@@ -180,8 +180,8 @@ bool process_barcode(struct repeating_timer *t)
             if (!value.success)
             {
                 // printf("First asterisk fail\n");
-                snprintf(message, sizeof(message), "First asterisk fail!\n", character_read);
-                SendToMessageBuffer(message, sizeof(message), 0);
+                // snprintf(message, sizeof(message), "First asterisk fail!\n", character_read);
+                // SendToMessageBuffer(message, sizeof(message), 0);
                 return true;
             }
 
