@@ -21,7 +21,7 @@
 static bool autonomous = false;
 static bool barcodeTaskLaunched = false;
 static int line_ir_poll_interval = 100;
-volatile int latest_obstacle_distance_when_white;
+static float latest_obstacle_distance_when_white;
 void ultrasonicTask(__unused void *params){
     // Ultrasonic
     // Send pulse every 100ms
@@ -56,7 +56,8 @@ void irTask(__unused void *params) {
                 // If white for more than 1 second, it's the end of line
                 if (white_counter >= 100)
                 {
-                    // 
+                    // Send a message to represent end of line
+
                 }
                 // If it's been white for more than 200ms, turn right
                 else if (white_counter >= 20)
@@ -70,7 +71,7 @@ void irTask(__unused void *params) {
                 // Just turned white, so record latest obstacle distance
                 if (white_counter == 1)
                 {
-
+                    latest_obstacle_distance_when_white = obstacle_distance;
                 }
                 // if (white_counter >= 1000)
                 // {
