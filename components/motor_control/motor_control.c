@@ -2,6 +2,7 @@
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include "hardware/timer.h"
+#include "motor_control.h"
 
 #include "components/ultrasonic_encoder/ultrasonic_encoder.h"
 // Define GPIO pins for Motor A (LEFT)
@@ -17,6 +18,8 @@
 volatile bool is_moving = false; // track if car is moving or not 
 
 volatile bool is_reversing = false; // track if car moving back
+
+volatile bool autonomous = false;
 
 // Function to set up the PWM
 // void setup_pwm(uint gpio, float freq, float duty_cycle) {
@@ -276,6 +279,11 @@ void motor_init(){
 }
 
 void process_command_with_speed(const int command) {
+    // printf("Autonomous: %d, Command: %d\n", autonomous, command);
+
+    if (autonomous) {
+        return;
+    }
 
     // printf("Command: %d\n", command);
         switch (command) {
@@ -302,7 +310,7 @@ void process_command_with_speed(const int command) {
             case 3:  // Turn Left
                 // printf("Left\n");
                 stop_motors();
-                turn_left(0.4f, 0.3f);  
+                turn_left(0.38f, 0.28f);  
 
                 break;
 

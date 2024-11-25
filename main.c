@@ -18,7 +18,6 @@
 #define ON_LINE 2
 #define mbaTASK_MESSAGE_BUFFER_SIZE (80) // message buffer size, increase as needed based on individual message size
 
-static bool autonomous = false;
 static bool barcodeTaskLaunched = false;
 static int line_ir_poll_interval = 100;
 static float latest_obstacle_distance_when_white;
@@ -74,6 +73,7 @@ void irTask(__unused void *params) {
                 // Just turned white, so record latest obstacle distance
                 if (white_counter == 1)
                 {
+                    sendPulse();
                     latest_obstacle_distance_when_white = obstacle_distance;
                 }
                 // if (white_counter >= 1000)

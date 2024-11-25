@@ -205,7 +205,7 @@ void telemetryTask(__unused void *params)
             obstacle_updated = false;
         }
         
-        snprintf(message, sizeof(message), "Speed: %.2fcm/s, Total distance covered: %.2fcm\nDistance to obstacle: %.2fcm\n", speed, total_distance, obstacle_distance);
+        snprintf(message, sizeof(message), "Speed: %.2fcm/s, \nDistance to obstacle: %.2fcm\n", speed, obstacle_distance);
         SendToMessageBuffer(message, sizeof(message), 0);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }    
