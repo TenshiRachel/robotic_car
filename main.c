@@ -55,15 +55,15 @@ void irTask(__unused void *params) {
                 turn_right(0.22f, 0.0f);
                 white_counter++;
                 // If white for more than 1 second, it's the end of line
-                if (white_counter >= 100)
-                {
-                    // Send a message to represent end of line
-                    char end_line_msg[64] = {0};
-                    snprintf(end_line_msg, sizeof(end_line_msg), "End of line reached! Obstacle distance: %.2f\n", latest_obstacle_distance_when_white);
-                    SendToMessageBuffer(end_line_msg, sizeof(end_line_msg), 0);
-                }
+                // if (white_counter >= 100)
+                // {
+                //     // Send a message to represent end of line
+                //     char end_line_msg[64] = {0};
+                //     snprintf(end_line_msg, sizeof(end_line_msg), "End of line reached! Obstacle distance: %.2f\n", latest_obstacle_distance_when_white);
+                //     SendToMessageBuffer(end_line_msg, sizeof(end_line_msg), 0);
+                // }
                 // If it's been white for more than 200ms, turn right
-                else if (white_counter >= 20)
+                if (white_counter >= 20)
                 {
                     turn_right(0.22f,0.0f);
                 }
