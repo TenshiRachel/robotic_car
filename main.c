@@ -19,6 +19,7 @@
 #define mbaTASK_MESSAGE_BUFFER_SIZE (80) // message buffer size, increase as needed based on individual message size
 
 static bool autonomous = false;
+static bool barcodeTaskLaunched = false;
 static int line_ir_poll_interval = 100;
 
 void ultrasonicTask(__unused void *params){
@@ -63,6 +64,11 @@ void irTask(__unused void *params) {
                 // turn_right(0.5f,0.7f);
                 // move_forward(0.55f,0.5f);
             }
+            if (autonomous && !barcodeTaskLaunched) {
+                TaskHandle_t infraBarCodeTask;
+                xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
+                barcodeTaskLaunched = true;
+            }
         }
         vTaskDelay(pdMS_TO_TICKS(line_ir_poll_interval));  // Delay ?? ms between readings
     }
@@ -85,8 +91,8 @@ void vLaunch( void){
     TaskHandle_t infraTask;
     xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
 
-    TaskHandle_t infraBarCodeTask;
-    xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
+    // TaskHandle_t infraBarCodeTask;
+    // xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
     TaskHandle_t task;
     xTaskCreate(wifi_and_server_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 3, &task);
     
