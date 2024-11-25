@@ -58,7 +58,6 @@ void irTask(__unused void *params) {
                     } else {
                         // move_forward(0.48f,0.18f);
                         move_forward(0.38f,0.48f);
-
                     }
                 }
                 // turn_right(0.5f,0.7f);
