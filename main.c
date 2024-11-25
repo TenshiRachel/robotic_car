@@ -45,7 +45,7 @@ void irBarcodeTask(__unused void *params){
 
 void irTask(__unused void *params) {
     while (1) {
-        int line_state = read_line();  // Read sensor data every 10 ms
+        int line_state = read_line();  // Read sensor data
         if (!blocked) {
             // Control motors based on line state if needed
             if (line_state == WHITE && autonomous) {

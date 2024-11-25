@@ -156,11 +156,15 @@ bool process_barcode(struct repeating_timer *t)
 
             characterValue value;
 
-            // for (int i = 0; i < FULL_BARCODE_SIZE; i++)
-            // {
-            //     printf("%c", classified_string_full[i]);
-            // }
+            for (int i = 0; i < FULL_BARCODE_SIZE; i++)
+            {
+                snprintf(message, sizeof(message), "%c", character_read);
+                SendToMessageBuffer(message, sizeof(message), 0);
+                // printf("%c", classified_string_full[i]);
+            }
             // printf("\n");
+            snprintf(message, sizeof(message), "\n", character_read);
+            SendToMessageBuffer(message, sizeof(message), 0);
 
             // If the 'gap' values are not thin lines
             if (!(classified_string_full[9] == '0') || !(classified_string_full[19] == '0'))
