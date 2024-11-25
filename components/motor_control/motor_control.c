@@ -296,13 +296,13 @@ void process_command_with_speed(const int command) {
             case 2:  // Turn Right
                 // printf("Right\n");
                 stop_motors();
-                turn_right(0.275f, 0.2f);  
+                turn_right(0.3f, 0.2f);  
                 break;
 
             case 3:  // Turn Left
                 // printf("Left\n");
                 stop_motors();
-                turn_left(0.28f, 0.15f);  
+                turn_left(0.3f, 0.15f);  
 
                 break;
 
