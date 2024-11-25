@@ -203,8 +203,8 @@ bool process_barcode(struct repeating_timer *t)
             if (!value.success)
             {
                 // printf("End asterisk fail\n");
-                snprintf(message, sizeof(message), "End asterisk fail!\n", character_read);
-                SendToMessageBuffer(message, sizeof(message), 0);
+                // snprintf(message, sizeof(message), "End asterisk fail!\n", character_read);
+                // SendToMessageBuffer(message, sizeof(message), 0);
                 read_flag = false;
                 reverse_flag = false;
                 return true;

@@ -17,7 +17,7 @@
 // #define SAFETY_THRESHOLD 15
 absolute_time_t start, end;
 
-static volatile float obstacle_distance = 0.0f;
+volatile float obstacle_distance = 0.0f;
 
 volatile bool blocked = false;  // Flag to enable/disable callback
 volatile bool turning = false; // track turning
