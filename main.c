@@ -52,11 +52,11 @@ void irTask(__unused void *params) {
             // Control motors based on line state if needed
             if (line_state == WHITE && autonomous) {
                 white_counter++;
-                if (white_counter >= 20)
+                if (white_counter >= 1000)
                 {
                     readjustment = true;
                     turn_left(0.0f, 0.22f);
-                } else
+                } else if (white_counter >= 200)
                 {
                     // turn_left(0.0f,0.22f);
                     turn_right(0.22f,0.0f);
@@ -80,8 +80,8 @@ void irTask(__unused void *params) {
             xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
             barcodeTaskLaunched = true;
         }
+        vTaskDelay(pdMS_TO_TICKS(1));  // Delay 1 ms between readings
     }
-    vTaskDelay(pdMS_TO_TICKS(line_ir_poll_interval));  // Delay ?? ms between readings
 }
 
 // pid task
