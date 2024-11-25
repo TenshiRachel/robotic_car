@@ -17,7 +17,7 @@
 // #define SAFETY_THRESHOLD 15
 absolute_time_t start, end;
 
-static float obstacle_distance = 0.0f;
+static volatile float obstacle_distance = 0.0f;
 
 volatile bool blocked = false;  // Flag to enable/disable callback
 volatile bool turning = false; // track turning
@@ -53,6 +53,7 @@ static volatile float total_distance = 0.0f;
 float end_distance = 0.0f; // Station 1: to indicate end of 90cm mark
 
 static bool speed_updated = false;
+static bool obstacle_updated = false;
 
 void sendPulse(){
     gpio_put(TRIG_PIN, 1);
@@ -135,6 +136,7 @@ void shared_callback(uint gpio, uint32_t events){
             uint64_t pulse = absolute_time_diff_us(start, end);
             float raw_distance = pulse * SOUND_SPEED / 2;
             obstacle_distance = raw_distance;
+            obstacle_updated = true;
             // obstacle_distance = kalman_update(raw_distance);
             // printf("Distance to obstacle: %.2f\n", obstacle_distance);
             if (obstacle_distance <= SAFETY_THRESHOLD && !blocked){
@@ -196,8 +198,14 @@ void telemetryTask(__unused void *params)
         } else {
             speed_updated = false;
         }
+
+        if (!obstacle_updated){
+            obstacle_distance = 0;
+        } else{
+            obstacle_updated = false;
+        }
         
-        snprintf(message, sizeof(message), "Speed: %.2fcm/s, Total distance covered: %.2fcm\n", speed, total_distance);
+        snprintf(message, sizeof(message), "Speed: %.2fcm/s, Total distance covered: %.2fcm\nDistance to obstacle: %.2fcm\n", speed, total_distance, obstacle_distance);
         SendToMessageBuffer(message, sizeof(message), 0);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }    
