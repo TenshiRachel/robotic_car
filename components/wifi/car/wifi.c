@@ -24,6 +24,7 @@
 #include "lwipopts.h"
 #include "wifi.h"
 #include "components/motor_control/motor_control.h"
+#include "components/ultrasonic_encoder/ultrasonic_encoder.h"
 
 #ifndef PING_ADDR
 #define PING_ADDR "192.168.137.1"
@@ -259,8 +260,11 @@ void wifi_and_server_task(__unused void *params)
     // TaskHandle_t broadcast_task;
     // xTaskCreate(broadcastTask, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, &broadcast_task);
 
+    TaskHandle_t send_data;
+    xTaskCreate(send_data_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &send_data);
+
     TaskHandle_t telemetry_task;
-    xTaskCreate(send_data_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &telemetry_task);
+    xTaskCreate(telemetryTask, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &telemetry_task);
 
     create_socket();
     run_server();

@@ -2,7 +2,7 @@
 #include "hardware/gpio.h"
 #include "hardware/timer.h"
 #include <stdio.h>
-
+#include "components/wifi/car/wifi.h"
 #include "components/motor_control/motor_control.h"
 
 // IMPORTANT!!! CHANGE BASED ON WHERE ITS PLUGGED FOR ACTUAL
@@ -52,6 +52,7 @@ static volatile float speed;
 static volatile float total_distance = 0.0f;
 float end_distance = 0.0f; // Station 1: to indicate end of 90cm mark
 
+static bool speed_updated = false;
 
 void sendPulse(){
     gpio_put(TRIG_PIN, 1);
@@ -74,6 +75,7 @@ void set_speed_distance()
     // printf("Speed right: %.2fcm/s\n", right_speed);
 
     speed = (left_speed + right_speed) / 2;
+    speed_updated = true;
 }
 
 void shared_callback(uint gpio, uint32_t events){
@@ -181,4 +183,22 @@ void wheel_encoder_init()
     // Use gpio_set_irq_enabled for additional pins
     gpio_set_irq_enabled(RIGHT_ENCODER_PIN, GPIO_IRQ_EDGE_RISE, true);
     last_time_right = get_absolute_time();
+}
+
+void telemetryTask(__unused void *params)
+{
+    while(1) {
+        char message[64] = {0};
+
+        // reset speed to 0 if not updated since last check
+        if(!speed_updated) {
+            speed = 0;
+        } else {
+            speed_updated = false;
+        }
+        
+        snprintf(message, sizeof(message), "Speed: %.2fcm/s, Total distance covered: %.2fcm\n", speed, total_distance);
+        SendToMessageBuffer(message, sizeof(message), 0);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }    
 }
