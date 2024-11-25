@@ -51,7 +51,7 @@ void irTask(__unused void *params) {
             // Control motors based on line state if needed
             if (line_state == WHITE && autonomous)
             {
-                turn_right(0.22f, 0.0f);
+                // turn_right(0.22f, 0.0f);
                 white_counter++;
                 // If white for more than 1 second, it's the end of line
                 // if (white_counter >= 100)
@@ -62,12 +62,12 @@ void irTask(__unused void *params) {
                 //     SendToMessageBuffer(end_line_msg, sizeof(end_line_msg), 0);
                 // }
                 // If it's been white for more than 200ms, turn right
-                if (white_counter >= 20)
+                if (white_counter >= 10)
                 {
-                    turn_right(0.22f,0.0f);
+                    turn_right(0.25f,0.0f);
                 }
                 else {
-                    move_forward(0.32f, 0.32f);
+                    move_forward(0.35f, 0.35f);
                 }
 
                 // Just turned white, so record latest obstacle distance
