@@ -302,7 +302,7 @@ void process_command_with_speed(const int command) {
             case 3:  // Turn Left
                 // printf("Left\n");
                 stop_motors();
-                turn_left(0.3f, 0.2f);  
+                turn_left(0.4f, 0.3f);  
 
                 break;
 
