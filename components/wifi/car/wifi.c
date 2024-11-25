@@ -88,7 +88,7 @@ void send_data_task(__unused void *params)
         {
             printf("Failed to send message: error %d\n", errno);
         } else {
-            printf("Sent message\n");
+            // printf("Sent message\n");
         }
     }
 
@@ -168,7 +168,7 @@ static void run_server()
         // printf("Received data from %s:%d\n", ip_str, ntohs(remote_addr.sin_port));
 
         // Step 7: Process received data (e.g., print it)
-        printf("Message: %s\n", buffer);
+        // printf("Message: %s\n", buffer);
 
         // printf("Buffer [0] %c\n", buffer[0]);
         process_command_with_speed(buffer[0]-'0'); 
