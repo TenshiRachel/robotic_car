@@ -135,7 +135,6 @@ void poll_wifi_state_task(__unused void *params)
         {
             printf("Wifi not connected\n");
             printf("Link state: %d\n", link_state);
-            //connect_wifi(); // wifi reconnect after loss seems to be not working
         }
         
         // printf("Running from core %u\n", get_core_num());
@@ -162,10 +161,6 @@ void main_task(__unused void *params)
     xTaskCreate(blink_led_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &led_task);
 
     connect_wifi();
-    // create_telemetry_socket();
-
-    // TaskHandle_t handle_conn_task;
-    // xTaskCreate(do_handle_connection, "Connection Thread", configMINIMAL_STACK_SIZE, (void *)sock, 2, &handle_conn_task);
 
     run_server();
 

@@ -63,7 +63,6 @@ void move_left_motor(float duty_cycle, bool forward){
     gpio_put(LEFT_MOTOR_IN1, 0);
     gpio_put(LEFT_MOTOR_IN2, 1);
     }
-    // setup_pwm(LEFT_MOTOR_ENA, 100.0f, duty_cycle);   
     set_duty_cycle(LEFT_MOTOR_ENA,duty_cycle);
  
 }
@@ -82,7 +81,6 @@ void move_right_motor(float duty_cycle, bool forward){
     gpio_put(RIGHT_MOTOR_IN4, 1);
     }
 
-    // setup_pwm(RIGHT_MOTOR_ENB, 100.0f, duty_cycle); 
     set_duty_cycle(RIGHT_MOTOR_ENB, duty_cycle);   
 }
 
@@ -124,15 +122,6 @@ void turn_right(float duty_cycle_A, float duty_cycle_B){
 
 
 // PID Constants for Motor A
-// float KpLeft = 0.21f; // Proportional: used to correct how far current is from the setpoint
-// float KiLeft = 0.03f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
-// float KdLeft = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
-
-// // PID Constants for Motor B
-// float KpRight= 0.295f; // Proportional: used to correct how far current is from the setpoint
-// float KiRight = 0.03f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
-// float KdRight = 0.01f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
-
 float KpLeft = 0.17f; // Proportional: used to correct how far current is from the setpoint
 float KiLeft = 0.00f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
 // float KiLeft =0.005f;
@@ -175,18 +164,6 @@ float compute_pid(float setpoint, float current_value, float *integral, float *p
 
     float motor_response = control_signal * 0.1;  // Motor response model
     //printf("Control Signal: %f , Motor Response: %f, current value: %f\n", control_signal,motor_response,current_value);    
-    // set boundary so that calculated signal will be within PWM range
-    // if (control_signal >= 1.0f)
-    // {
-    //     control_signal = 0.99f;
-    //     *integral = 0;
-    // }
-    // else if (control_signal < 0.0f)
-    // {
-    //     control_signal = 0.0f;
-    //     *integral = 0;
-    // }
-
     return motor_response;
 }
 
@@ -270,12 +247,9 @@ void motor_init(){
     gpio_init(RIGHT_MOTOR_IN4);
     gpio_set_dir(RIGHT_MOTOR_IN3, GPIO_OUT);
     gpio_set_dir(RIGHT_MOTOR_IN4, GPIO_OUT);
-    // move_forward(0.8f,0.8f);
     
     setup_pwm(LEFT_MOTOR_ENA, 100.0f);
     setup_pwm(RIGHT_MOTOR_ENB, 100.0f);    
-
-    // move_up(); // move forward with PID
 }
 
 void process_command_with_speed(const int command) {
@@ -290,14 +264,12 @@ void process_command_with_speed(const int command) {
             case 0:  // Forward
                 // printf("Forward\n");
                 stop_motors();
-                // move_forward(0.275f, 0.275f); 
                 move_up(); // use PID to move
                 break;
 
             case 1:  // Backward
                 // printf("Backward\n");
                 stop_motors();
-                // move_backward(0.275f, 0.275f);  
                 move_back(); // use PID to move backwards
                 break;
 

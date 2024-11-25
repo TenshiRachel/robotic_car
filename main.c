@@ -51,16 +51,7 @@ void irTask(__unused void *params) {
             // Control motors based on line state if needed
             if (line_state == WHITE && autonomous)
             {
-                // turn_right(0.22f, 0.0f);
                 white_counter++;
-                // If white for more than 1 second, it's the end of line
-                // if (white_counter >= 100)
-                // {
-                //     // Send a message to represent end of line
-                //     char end_line_msg[64] = {0};
-                //     snprintf(end_line_msg, sizeof(end_line_msg), "End of line reached! Obstacle distance: %.2f\n", latest_obstacle_distance_when_white);
-                //     SendToMessageBuffer(end_line_msg, sizeof(end_line_msg), 0);
-                // }
                 // If it's been white for more than 200ms, turn right
                 if (white_counter >= 10)
                 {
@@ -76,27 +67,15 @@ void irTask(__unused void *params) {
                     sendPulse();
                     latest_obstacle_distance_when_white = obstacle_distance;
                 }
-                // if (white_counter >= 1000)
-                // {
-                //     readjustment = true;
-                //     turn_left(0.0f, 0.32f);
-                // } else if (white_counter >= 200)
-                // {
-                //     // turn_left(0.0f,0.22f);
-                //     turn_right(0.22f,0.0f);
-                // }
             } else if (line_state == BLACK)
             {
                 white_counter = 0;
                 if(!autonomous) {
                     autonomous = true;
                 } else {
-                    // move_forward(0.48f,0.18f);
                     move_forward(0.32f,0.42f);
                 }
             }
-                // turn_right(0.5f,0.7f);
-                // move_forward(0.55f,0.5f);
         }
         if (autonomous && !barcodeTaskLaunched) {
             TaskHandle_t infraBarCodeTask;
@@ -133,8 +112,6 @@ void vLaunch( void){
     TaskHandle_t infraTask;
     xTaskCreate(irTask, "infraThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraTask);
 
-    // TaskHandle_t infraBarCodeTask;
-    // xTaskCreate(irBarcodeTask, "barCodeThread", configMINIMAL_STACK_SIZE, NULL, 3, &infraBarCodeTask);
     TaskHandle_t task;
     xTaskCreate(wifi_and_server_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 3, &task);
     

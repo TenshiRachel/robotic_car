@@ -6,15 +6,12 @@
 #include "components/motor_control/motor_control.h"
 
 // IMPORTANT!!! CHANGE BASED ON WHERE ITS PLUGGED FOR ACTUAL
-// #define TRIG_PIN 1
-// #define ECHO_PIN 0
 #define TRIG_PIN 7
 #define ECHO_PIN 6
 #define MAX_RANGE 400.0f
 #define SOUND_SPEED 0.0343f
 #define TIMEOUT_US 26100
 #define SAFETY_THRESHOLD 18
-// #define SAFETY_THRESHOLD 15
 absolute_time_t start, end;
 
 volatile float obstacle_distance = 0.0f;
@@ -22,19 +19,10 @@ volatile float obstacle_distance = 0.0f;
 volatile bool blocked = false;  // Flag to enable/disable callback
 volatile bool turning = false; // track turning
 
-// Kalman filter variables
-static float estimate = 0.0f;
-static float uncertainty = 1.0f;
-const float Q = 0.01f;
-const float R = 0.1f;
-
-
 /* defines/static variables from wheel encoder are below */
 
 // IMPORTANT!!! CHANGE BASED ON WHERE ITS PLUGGED FOR ACTUAL
-// #define LEFT_ENCODER_PIN 2
 #define LEFT_ENCODER_PIN 8
-// #define RIGHT_ENCODER_PIN 26
 #define RIGHT_ENCODER_PIN 2
 #define TIMEOUT_MS 1000   // Timeout after 1 second to reset pulse widths
 #define NOTCHES_CM 1.025f // Circumference 21cm, 20 notches, therefore 1 notch approx 20.5/20cm
@@ -50,7 +38,6 @@ static float pulse_width_left, pulse_width_right;
 static absolute_time_t last_time_left, last_time_right;
 static volatile float speed;
 static volatile float total_distance = 0.0f;
-float end_distance = 0.0f; // Station 1: to indicate end of 90cm mark
 
 static bool speed_updated = false;
 static bool obstacle_updated = false;
@@ -137,8 +124,6 @@ void shared_callback(uint gpio, uint32_t events){
             float raw_distance = pulse * SOUND_SPEED / 2;
             obstacle_distance = raw_distance;
             obstacle_updated = true;
-            // obstacle_distance = kalman_update(raw_distance);
-            // printf("Distance to obstacle: %.2f\n", obstacle_distance);
             if (obstacle_distance <= SAFETY_THRESHOLD && !blocked){
                 stop_motors();
                 blocked = true;
