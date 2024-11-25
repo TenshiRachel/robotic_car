@@ -2,7 +2,7 @@
 #include "hardware/gpio.h"
 #include "hardware/timer.h"
 #include <stdio.h>
-
+#include "components/wifi/car/wifi.h"
 #include "components/motor_control/motor_control.h"
 
 // IMPORTANT!!! CHANGE BASED ON WHERE ITS PLUGGED FOR ACTUAL
@@ -17,7 +17,7 @@
 // #define SAFETY_THRESHOLD 15
 absolute_time_t start, end;
 
-static float obstacle_distance = 0.0f;
+volatile float obstacle_distance = 0.0f;
 
 volatile bool blocked = false;  // Flag to enable/disable callback
 volatile bool turning = false; // track turning
@@ -52,6 +52,8 @@ static volatile float speed;
 static volatile float total_distance = 0.0f;
 float end_distance = 0.0f; // Station 1: to indicate end of 90cm mark
 
+static bool speed_updated = false;
+static bool obstacle_updated = false;
 
 void sendPulse(){
     gpio_put(TRIG_PIN, 1);
@@ -70,10 +72,11 @@ void set_speed_distance()
 
     left_speed = (pulse_width_left > 0) ? (NOTCHES_CM / pulse_width_left) * 1000 : 0;
     right_speed = (pulse_width_right > 0) ? (NOTCHES_CM / pulse_width_right) * 1000 : 0;
-    printf("Speed left: %.2fcm/s\n", left_speed);
-    printf("Speed right: %.2fcm/s\n", right_speed);
+    // printf("Speed left: %.2fcm/s\n", left_speed);
+    // printf("Speed right: %.2fcm/s\n", right_speed);
 
     speed = (left_speed + right_speed) / 2;
+    speed_updated = true;
 }
 
 void shared_callback(uint gpio, uint32_t events){
@@ -133,29 +136,16 @@ void shared_callback(uint gpio, uint32_t events){
             uint64_t pulse = absolute_time_diff_us(start, end);
             float raw_distance = pulse * SOUND_SPEED / 2;
             obstacle_distance = raw_distance;
+            obstacle_updated = true;
             // obstacle_distance = kalman_update(raw_distance);
-            printf("Distance to obstacle: %.2f\n", obstacle_distance);
+            // printf("Distance to obstacle: %.2f\n", obstacle_distance);
             if (obstacle_distance <= SAFETY_THRESHOLD && !blocked){
                 stop_motors();
-                turn_right(0.8f, 0.75f);
                 blocked = true;
+            }
 
-                pulse_required = pulses_left + 10; // 10 pulses to turn 90 deg angle
-                turning = true;
-            }
-                // Check if we are turning and whether to stop
-            if (turning && pulses_left >= pulse_required) {
-                stop_motors();
-                turning = false; // Reset the turning state
-                end_distance = total_distance + 90; // 90 cm to get expected final distance
-            }
-            else if (obstacle_distance > SAFETY_THRESHOLD && blocked && !turning) {
-                if (total_distance < end_distance) {
-                    move_up();
-                } else { // total distance > end_distance , then stop motor
-                    stop_motors();
-                    blocked = false;
-                }
+            else if (obstacle_distance > SAFETY_THRESHOLD && blocked){
+                blocked = false;
             }
         }
     }
@@ -195,4 +185,28 @@ void wheel_encoder_init()
     // Use gpio_set_irq_enabled for additional pins
     gpio_set_irq_enabled(RIGHT_ENCODER_PIN, GPIO_IRQ_EDGE_RISE, true);
     last_time_right = get_absolute_time();
+}
+
+void telemetryTask(__unused void *params)
+{
+    while(1) {
+        char message[64] = {0};
+
+        // reset speed to 0 if not updated since last check
+        if(!speed_updated) {
+            speed = 0;
+        } else {
+            speed_updated = false;
+        }
+
+        if (!obstacle_updated){
+            obstacle_distance = 0;
+        } else{
+            obstacle_updated = false;
+        }
+        
+        snprintf(message, sizeof(message), "Speed: %.2fcm/s, Dist: %.2fcm, Obst Dist: %.2fcm\n", speed, total_distance, obstacle_distance);
+        SendToMessageBuffer(message, sizeof(message), 0);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }    
 }

@@ -1,4 +1,3 @@
-// using UDP for the network connection
 #include "pico/cyw43_arch.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
@@ -21,7 +20,6 @@
 #define BUF_SIZE 128
 
 int conn_sock;
-int packet_count = 0;
 
 uint8_t led_blink_state = 1;
 
@@ -40,7 +38,7 @@ static void run_server()
     // Step 2: Bind the socket to the specified port and address
     struct sockaddr_in listen_addr = {
         .sin_family = AF_INET,
-        .sin_port = htons(8000),      // Port to listen on (1234)
+        .sin_port = htons(1234),      // Port to listen on (1234)
         .sin_addr.s_addr = INADDR_ANY // Listen on any available IP address
     };
 
@@ -75,9 +73,7 @@ static void run_server()
         // Step 6: Extract and print client IP address
         // char ip_str[INET_ADDRSTRLEN] = {0}; // Buffer for client IP
         // inet_ntop(AF_INET, &remote_addr.sin_addr, ip_str, sizeof(ip_str));
-        packet_count++;
-        printf("Message %d: %s\n", packet_count, buffer);
-
+        printf("Message: %s\n", buffer);
     }
     close(conn_sock);
 }
@@ -86,7 +82,8 @@ void blink_led_task(__unused void *params)
 {
     while (1)
     {
-        if(led_blink_state == 1) {
+        if (led_blink_state == 1)
+        {
             cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
             sleep_ms(50);
             cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
@@ -95,21 +92,53 @@ void blink_led_task(__unused void *params)
     }
 }
 
+void connect_wifi()
+{
+    while (1)
+    {
+        led_blink_state = 1;
+        printf("Connecting wifi\n");
+        if (cyw43_arch_wifi_connect_timeout_ms("Matt", "whyyoustealingmydata", CYW43_AUTH_WPA2_AES_PSK, 20000))
+        {
+            printf("failed to connect.\n");
+        }
+        else
+        {
+            printf("Connected.\n");
+            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+            break;
+        }
+    }
+}
+
 void poll_wifi_state_task(__unused void *params)
 {
-    int num_stas = 2;
+    /* definitions of wifi status codes for reference */
+
+    // #define CYW43_LINK_DOWN (0)     ///< link is down
+    // #define CYW43_LINK_JOIN (1)     ///< Connected to wifi
+    // #define CYW43_LINK_NOIP (2)     ///< Connected to wifi, but no IP address
+    // #define CYW43_LINK_UP (3)       ///< Connect to wifi with an IP address
+    // #define CYW43_LINK_FAIL (-1)    ///< Connection failed
+    // #define CYW43_LINK_NONET (-2)   ///< No matching SSID found (could be out of range, or down)
+    // #define CYW43_LINK_BADAUTH (-3) ///< Authenticatation failure
     uint8_t macs[16] = {0};
     while (1)
     {
-        cyw43_wifi_ap_get_stas(&cyw43_state, &num_stas, macs);
-
-        if(num_stas > 0) {
+        int link_state = cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA);
+        if (link_state == CYW43_LINK_UP)
+        {
             led_blink_state = 0;
             cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-        } else {
-            led_blink_state = 1;
         }
-
+        else
+        {
+            printf("Wifi not connected\n");
+            printf("Link state: %d\n", link_state);
+            //connect_wifi(); // wifi reconnect after loss seems to be not working
+        }
+        
+        // printf("Running from core %u\n", get_core_num());
         sleep_ms(1000);
     }
 }
@@ -117,26 +146,26 @@ void poll_wifi_state_task(__unused void *params)
 void main_task(__unused void *params)
 {
     if (cyw43_arch_init())
+    // if (cyw43_arch_init_with_country(CYW43_COUNTRY_SINGAPORE)) // tell the wifi chip its location - maybe can have better performance?
     {
         printf("failed to initialise\n");
         return;
     }
     cyw43_wifi_pm(&cyw43_state, CYW43_PERFORMANCE_PM);
-    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+    cyw43_arch_enable_sta_mode();
+    printf("Connecting to Wi-Fi...\n");
 
-    const char *ap_name = "picow_p5a";
-#if 1
-    const char *password = "password";
-#else
-    const char *password = NULL;
-#endif
-    cyw43_arch_enable_ap_mode(ap_name, password, CYW43_AUTH_WPA2_AES_PSK);
-    
     TaskHandle_t wifi_task;
     xTaskCreate(poll_wifi_state_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &wifi_task);
 
-    //TaskHandle_t led_task;
+    TaskHandle_t led_task;
     xTaskCreate(blink_led_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 2, &led_task);
+
+    connect_wifi();
+    // create_telemetry_socket();
+
+    // TaskHandle_t handle_conn_task;
+    // xTaskCreate(do_handle_connection, "Connection Thread", configMINIMAL_STACK_SIZE, (void *)sock, 2, &handle_conn_task);
 
     run_server();
 

@@ -22,6 +22,12 @@ A robotic car with the following features:
 - C/C++ Extension
 - Make sure you are working in 'Pico - Visual Studio Code'
 - Make sure the folder is called 'robotic_car'
+- 3 Picos (For Car, Remote, and Dashboard)
+- Change the parameters in 'wifi.c' line 236 to your Wifi or Hotspot SSID and password
+
+```
+cyw43_arch_wifi_connect_timeout_ms(YOUR_HOTSPOT_SSID, YOUR_HOTSPOT_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 30000)
+```
 
 
 ### Steps
@@ -32,4 +38,33 @@ A robotic car with the following features:
 4. Look for 'Pico ARM GCC - Pico SDK Toolchain with GCC arm-none-eabi'
 5. If not found, select unspecified
 6. Build the robotic_car (Executable) in the CMake tab
-7. Copy the uf2 file from the build folder to your Pico drive
+7. Copy the uf2 file from the build folder into your Robotic car Pico's drive
+8. Build the remote_wifi (Executable) in the CMake tab
+9. Copy the uf2 file from the build folder into your Remote controller Pico's drive
+10. Build the dashboard (Executable) in the CMake tab
+11. Copy the uf2 file from the build folder into your Dashboard Pico's drive
+
+### Establishing connection between Picos
+Connection state is indicated on LED of Remote control and Dashboard Picos
+
+#### LED states:
+- Blinking (Looking for connection)
+- Off (Connecting)
+- On (Connected)
+
+### Remote controls
+- Move forward (Tilt down)
+- Move backwards (Tilt up)
+- Stop (Flat position aligned with flat surface)
+- Turn left (Tilt left)
+- Turn right (Tilt right)
+
+## Functions
+1. Remote controller to control car over Wifi (Hotspot) and Magnetometer
+2. Dashboard to monitor speed, distance covered and barcode scanning output
+through Serial Monitor
+3. Switching to auto mode upon detecting a line
+4. Line following and barcode reading through IR Sensor
+5. Speed and distance tracking through Wheel Encoders
+6. Emergency braking upon detecting obstacle within 10cm
+7. Dynamic motor system using pid

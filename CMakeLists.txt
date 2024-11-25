@@ -28,7 +28,7 @@ components/wifi/car/wifi.c
 
 target_compile_definitions(robotic_car PRIVATE
         STATIC_IP=1    # uncomment this to disable dhcp client and use static ip addr. must be used in conjunction with PICO_ROLE
-        PICO_ROLE=1    # uncomment this to set the appropriate static ip. refer to lwipopts_examples_common.h for more info
+        PICO_ROLE=0    # uncomment this to set the appropriate static ip. refer to lwipopts_examples_common.h for more info
         NO_SYS=0            # don't want NO_SYS (generally this would be in your lwipopts.h)
         LWIP_SOCKET=1       # we need the socket API (generally this would be in your lwipopts.h)
         PING_USE_SOCKETS=1
@@ -62,8 +62,8 @@ add_executable(robotic_car_wifi
         )
 
 target_compile_definitions(robotic_car_wifi PRIVATE
-        WIFI_SSID=\"picow_p5a\"
-        WIFI_PASSWORD=\"password\"
+        WIFI_SSID=\"Matt\"
+        WIFI_PASSWORD=\"whyyoustealingmydata\"
         NO_SYS=0            # don't want NO_SYS (generally this would be in your lwipopts.h)
         LWIP_SOCKET=1       # we need the socket API (generally this would be in your lwipopts.h)
         PING_USE_SOCKETS=1
@@ -98,8 +98,8 @@ add_executable(remote_wifi
 target_compile_definitions(remote_wifi PRIVATE
         STATIC_IP=1    # uncomment this to disable dhcp client and use static ip addr. must be used in conjunction with PICO_ROLE
         PICO_ROLE=1    # uncomment this to set the appropriate static ip. refer to lwipopts_examples_common.h for more info
-        WIFI_SSID=\"picow_p5a\"
-        WIFI_PASSWORD=\"password\"
+        WIFI_SSID=\"Matt\"
+        WIFI_PASSWORD=\"whyyoustealingmydata\"
         NO_SYS=0            # don't want NO_SYS (generally this would be in your lwipopts.h)
         LWIP_SOCKET=1       # we need the socket API (generally this would be in your lwipopts.h)
         )
@@ -129,8 +129,8 @@ add_executable(dashboard
         )
 
 target_compile_definitions(dashboard PRIVATE
-        # STATIC_IP=1    # uncomment this to disable dhcp client and use static ip addr. must be used in conjunction with PICO_ROLE
-        # PICO_ROLE=1    # uncomment this to set the appropriate static ip. refer to lwipopts_examples_common.h for more info
+        STATIC_IP=1    # uncomment this to disable dhcp client and use static ip addr. must be used in conjunction with PICO_ROLE
+        PICO_ROLE=2    # uncomment this to set the appropriate static ip. refer to lwipopts_examples_common.h for more info
         WIFI_SSID=\"${WIFI_SSID}\"
         WIFI_PASSWORD=\"${WIFI_PASSWORD}\"
         NO_SYS=0            # don't want NO_SYS (generally this would be in your lwipopts.h)

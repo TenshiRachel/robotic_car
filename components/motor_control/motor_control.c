@@ -2,6 +2,7 @@
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include "hardware/timer.h"
+#include "motor_control.h"
 
 #include "components/ultrasonic_encoder/ultrasonic_encoder.h"
 // Define GPIO pins for Motor A (LEFT)
@@ -15,6 +16,10 @@
 #define RIGHT_MOTOR_IN4 13   // GP5 for Motor B direction
 
 volatile bool is_moving = false; // track if car is moving or not 
+
+volatile bool is_reversing = false; // track if car moving back
+
+volatile bool autonomous = false;
 
 // Function to set up the PWM
 // void setup_pwm(uint gpio, float freq, float duty_cycle) {
@@ -102,6 +107,7 @@ void stop_motors() {
     gpio_put(RIGHT_MOTOR_IN3, 0);
     gpio_put(RIGHT_MOTOR_IN4, 0);
     is_moving = false;
+    is_reversing = false;
 }
 
 
@@ -129,10 +135,12 @@ void turn_right(float duty_cycle_A, float duty_cycle_B){
 
 float KpLeft = 0.17f; // Proportional: used to correct how far current is from the setpoint
 float KiLeft = 0.00f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
+// float KiLeft =0.005f;
+// float KiLeft = 0.01f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
 float KdLeft = 0.00f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
 
 // PID Constants for Motor B
-float KpRight= 0.17f; // Proportional: used to correct how far current is from the setpoint
+float KpRight= 0.16f; // Proportional: used to correct how far current is from the setpoint
 float KiRight = 0.01f; // Integral: accumulated error over time, if Proportional gain does not match setpoint, integral will make the adjustment
 float KdRight = 0.00f; // Derivative: predicts based on change/trend over time, prevent overshooting of value
 
@@ -166,7 +174,7 @@ float compute_pid(float setpoint, float current_value, float *integral, float *p
 
 
     float motor_response = control_signal * 0.1;  // Motor response model
-    printf("Control Signal: %f , Motor Response: %f, current value: %f\n", control_signal,motor_response,current_value);    
+    //printf("Control Signal: %f , Motor Response: %f, current value: %f\n", control_signal,motor_response,current_value);    
     // set boundary so that calculated signal will be within PWM range
     // if (control_signal >= 1.0f)
     // {
@@ -185,20 +193,37 @@ float compute_pid(float setpoint, float current_value, float *integral, float *p
 
 // both motors forward with PID
 void move_up(){
-    target_speed_motorA = 30.0f;
-    target_speed_motorB = 30.0f;
+    target_speed_motorA = 40.0f;
+    target_speed_motorB = 40.0f;
     // printf("Left spd: %f, Right spd: %f\n", left_speed, right_speed);
     // get duty cycle based on PID
     float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, &integral_motorA, &previous_error_motorA, KpLeft, KiLeft, KdLeft);
     float duty_cycle_B = compute_pid(target_speed_motorB, right_speed, &integral_motorB,&previous_error_motorB, KpRight, KiRight, KdRight);
+
     move_left_motor(duty_cycle_A, true); // move A forward with duty cycle from PID
     move_right_motor(duty_cycle_B, true); // move B forward with duty cycle from PID
+    
     is_moving = true;
 }
 
+void move_back()
+{
+    target_speed_motorA = 40.0f;
+    target_speed_motorB = 40.0f;
+    float duty_cycle_A = compute_pid(target_speed_motorA,left_speed,&integral_motorA, &previous_error_motorA, KpLeft, KiLeft, KdLeft);
+    float duty_cycle_B = compute_pid(target_speed_motorB,right_speed, &integral_motorB, &previous_error_motorB, KpRight, KiRight, KdRight);
+
+    move_left_motor(duty_cycle_A, false);
+    move_right_motor(duty_cycle_B, false);
+
+    is_reversing = true;
+
+
+}
 struct repeating_timer pid_timer;
 
 bool pid_timer_callback() {
+
     if (is_moving) {
         // Compute PID output for Motor A
         float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, 
@@ -213,6 +238,22 @@ bool pid_timer_callback() {
         // Update motor speeds with the computed duty cycles
         move_left_motor(duty_cycle_A, true);
         move_right_motor(duty_cycle_B, true);
+    }
+    else if (is_reversing)
+    {
+        // Compute PID output for Motor A
+        float duty_cycle_A = compute_pid(target_speed_motorA, left_speed, 
+                                         &integral_motorA, &previous_error_motorA, 
+                                         KpLeft, KiLeft, KdLeft);
+        
+        // Compute PID output for Motor B
+        float duty_cycle_B = compute_pid(target_speed_motorB, right_speed, 
+                                         &integral_motorB, &previous_error_motorB, 
+                                         KpRight, KiRight, KdRight);
+
+        // Update motor speeds with the computed duty cycles
+        move_left_motor(duty_cycle_A, false);
+        move_right_motor(duty_cycle_B, false);        
     }
     return true;
 }
@@ -234,5 +275,52 @@ void motor_init(){
     setup_pwm(LEFT_MOTOR_ENA, 100.0f);
     setup_pwm(RIGHT_MOTOR_ENB, 100.0f);    
 
-    move_up(); // move forward with PID
+    // move_up(); // move forward with PID
+}
+
+void process_command_with_speed(const int command) {
+    // printf("Autonomous: %d, Command: %d\n", autonomous, command);
+
+    if (autonomous) {
+        return;
+    }
+
+    // printf("Command: %d\n", command);
+        switch (command) {
+            case 0:  // Forward
+                // printf("Forward\n");
+                stop_motors();
+                // move_forward(0.275f, 0.275f); 
+                move_up(); // use PID to move
+                break;
+
+            case 1:  // Backward
+                // printf("Backward\n");
+                stop_motors();
+                // move_backward(0.275f, 0.275f);  
+                move_back(); // use PID to move backwards
+                break;
+
+            case 2:  // Turn Right
+                // printf("Right\n");
+                stop_motors();
+                turn_right(0.3f, 0.2f);  
+                break;
+
+            case 3:  // Turn Left
+                // printf("Left\n");
+                stop_motors();
+                turn_left(0.38f, 0.28f);  
+
+                break;
+
+            case 4: // Stop car
+                // printf("Stop\n");
+                stop_motors();
+                break;
+
+            default:
+                printf("Unknown action: %d\n", command); 
+                break;
+        }
 }
