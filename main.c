@@ -61,15 +61,35 @@ void irTask(__unused void *params) {
                 //     snprintf(end_line_msg, sizeof(end_line_msg), "End of line reached! Obstacle distance: %.2f\n", latest_obstacle_distance_when_white);
                 //     SendToMessageBuffer(end_line_msg, sizeof(end_line_msg), 0);
                 // }
-                // If it's been white for more than 200ms, turn right
-                if (white_counter >= 10)
-                {
-                    turn_right(0.25f,0.0f);
-                }
-                else {
-                    move_forward(0.35f, 0.35f);
-                }
+                // If it's been white for more than 100ms, turn right
+                // START FROM LEFT SIDE
+                // if (white_counter >= 100)
+                // {
+                //     turn_right(0.25f, 0.0f);
+                // }
+                // // else if (white_counter >= 100)
+                // // {
+                // //     // turn_right(0.20f,0.0f);
+                // //     move_forward(0.42f, 0.32f); // lean right more?
+                // // }
+                // else {
+                //     // keep going first but equal pwm
+                //     move_forward(0.35f, 0.35f);
+                // }
 
+                // OPPOSITE DIRECTION (START FROM RIGHT SIDE)
+                if (white_counter >= 200)
+                {
+                    turn_left(0.0f, 0.30f);
+                }
+                else if (white_counter >= 20)
+                {
+                    move_forward(0.30f, 0.38f);
+                }
+                else
+                {
+                    move_forward(0.38f, 0.36f);
+                }
                 // Just turned white, so record latest obstacle distance
                 if (white_counter == 1)
                 {
@@ -92,7 +112,12 @@ void irTask(__unused void *params) {
                     autonomous = true;
                 } else {
                     // move_forward(0.48f,0.18f);
-                    move_forward(0.32f,0.42f);
+
+                    // START FROM LEFT SIDE (lean left)
+                    // move_forward(0.32f,0.42f);
+
+                    // START FROM RIGHT SIDE
+                    move_forward (0.38f, 0.36f);
                 }
             }
                 // turn_right(0.5f,0.7f);
@@ -111,7 +136,7 @@ void irTask(__unused void *params) {
             SendToMessageBuffer(end_line_msg, sizeof(end_line_msg), 0);
             end_of_line = true;
         }
-        vTaskDelay(pdMS_TO_TICKS(10));  // Delay 10 ms between readings
+        vTaskDelay(pdMS_TO_TICKS(1));  // Delay 10 ms between readings
     }
 }
 
