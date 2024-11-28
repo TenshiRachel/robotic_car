@@ -23,10 +23,31 @@ A robotic car with the following features:
 - Make sure you are working in 'Pico - Visual Studio Code'
 - Make sure the folder is called 'robotic_car'
 - 3 Picos (For Car, Remote, and Dashboard)
-- Change the parameters in 'wifi.c' line 236 to your Wifi or Hotspot SSID and password
+- Change the parameters in 'wifi.c' line 190 to your Wifi or Hotspot SSID and password
 
 ```
 cyw43_arch_wifi_connect_timeout_ms(YOUR_HOTSPOT_SSID, YOUR_HOTSPOT_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 30000)
+```
+
+- Change the WIFI_SSID and WIFI_PASSWORD in 'CMakeLists.txt' line 65-66 and 101-102 to your Wifi or Hotspot SSID and password
+
+```
+target_compile_definitions(robotic_car_wifi PRIVATE
+        WIFI_SSID=\"Matt\"
+        WIFI_PASSWORD=\"whyyoustealingmydata\"
+        NO_SYS=0            # don't want NO_SYS (generally this would be in your lwipopts.h)
+        LWIP_SOCKET=1       # we need the socket API (generally this would be in your lwipopts.h)
+        PING_USE_SOCKETS=1
+        )
+
+target_compile_definitions(remote_wifi PRIVATE
+        STATIC_IP=1    # uncomment this to disable dhcp client and use static ip addr. must be used in conjunction with PICO_ROLE
+        PICO_ROLE=1    # uncomment this to set the appropriate static ip. refer to lwipopts_examples_common.h for more info
+        WIFI_SSID=\"Matt\"
+        WIFI_PASSWORD=\"whyyoustealingmydata\"
+        NO_SYS=0            # don't want NO_SYS (generally this would be in your lwipopts.h)
+        LWIP_SOCKET=1       # we need the socket API (generally this would be in your lwipopts.h)
+        )
 ```
 
 
